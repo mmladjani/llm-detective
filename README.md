@@ -1,4 +1,4 @@
-# LLM Detective / TRACE
+# LLM Detective
 
 A small agent-driven investigation demo. The LLM chooses tools, interprets collected
 records, revises hypotheses and submits its own conclusion. A separate reviewer
@@ -31,32 +31,50 @@ python app.py run                   # terminal demo, case-011 by default
 python app.py run --case case-013    # stolen badge / framing scenario
 ```
 
-Both web views default to **LLM agent** and put model-inference cases first. No key
+Both web views default to **AI detective** and show only model-inference cases. No key
 means an explicit error when starting an LLM run, not a silent switch to a scripted
-driver. Select the rule-based mode explicitly for an offline comparison.
+driver. Select **Legacy — deterministic demo** explicitly for the older offline examples.
 
-In the main view, use **Choose a case → Choose the investigator → Start investigation**.
+In the main view, use **Choose the investigator → Choose a case → Start investigation**.
 Start begins automatic play. Pause lets the current turn finish; then use Next turn
 or Continue automatically. The selected case preview explains its mode and budget.
+Both views show a floating spinner and elapsed time while a session request or automatic
+investigation is active, including turns that contain judge review. It stays visible
+while scrolling and disappears when the run pauses, needs a human answer, finishes
+or a request fails. Pause lets an in-flight request finish first. The indicator is
+not a completion percentage or a live feed of the model's internal phase.
 
 - **011 — The Vanished Manuscript:** unlabelled access, camera and physical records.
 - **012 — The Server Room Breach:** an unrelated lie alongside database-copy evidence.
 - **013 — The Borrowed Badge:** distinguish the badge owner from the badge user; two
   apparently corroborating records share the same underlying source.
 
-Cases 001–010 and the custom-case builder retain authored evidence for comparison.
-Selecting an LLM driver on an authored case does not make its evidence model-inferred.
+Cases 008–010 add human witnesses to the same LLM inference flow. Cases 001–007
+remain unchanged legacy examples with fixed rules and preassigned evidence weights.
+They were used to explore differences between deterministic and LLM-driven behavior;
+the UI does not offer a side-by-side comparison. The legacy case builder is available
+only when Legacy is selected. The API and evaluation tools still support authored
+LLM runs for research, but those are hybrid runs and are not offered in the demo UI.
+
+The two UI lists are different case sets, not a controlled performance comparison.
+Do not compare a Legacy score on one case with an AI score on another as evidence
+that either approach is better. For measurements, use the same case version, public
+records, action budget and evaluator for both drivers; see the evaluation commands below.
 
 ### Human-in-the-loop
 
-It is included, not a separate missing copy. In the main view's case dropdown, choose
-the **Human-in-the-loop — you play a witness** group: 008 (The Night Dispensary), 009
-(The Stolen Pendant), or 010 (The Damaged Archive). Keep the LLM investigator selected.
+With **AI detective** selected, choose a case marked **You play a witness**: 008
+(The Night Dispensary), 009 (The Stolen Pendant), or 010 (The Damaged Archive).
+Human participation is a case feature, not another investigator mode.
 If the agent chooses `interview_human`, play pauses and shows your private role card,
 the question and an answer box. Your submitted answer resumes the investigation.
 The agent cannot supply that answer or see the private role card. It can also choose
-to solve the case from other records without interviewing you. These legacy scenarios
-use authored weights; cases 011–013 demonstrate model-owned evidence inference.
+to solve the case from other records without interviewing you. All six main-demo
+cases (008–013) require model-owned evidence assessments and cited fact assertions.
+Human answers are claims to corroborate, not automatically weighted evidence. In
+model mode, the tool does not pre-label a reply as truthful, false or contradictory;
+the detective must interpret it in the accumulated transcript. Private role-card
+consistency checks remain engine-side and do not inform the investigator or reviewer.
 Board view omits human cases because it has no answer panel.
 
 ## What is agent-driven?
@@ -143,6 +161,12 @@ python -m pytest -q
 python eval/run_all.py --mode rule_based --runs 1
 ```
 
+For the browser activity controller, with Node.js available (no npm install needed):
+
+```bash
+node --test tests/web_activity.test.cjs
+```
+
 Live checks (require the exported API key and incur Anthropic usage):
 
 ```bash
@@ -152,8 +176,10 @@ python eval/reviewer_controls.py --runs 2
 python eval/reviewer_controls.py --audit-only --runs 2
 ```
 
-Live evaluation defaults to model cases 011–013. Add `--include-authored` to include
-the comparison corpus. `--compare` measures a fixed uniform/lexical baseline on the
+Batch live evaluation defaults to non-interactive model cases 011–013 so it never
+unexpectedly waits for a person. Use `python eval/run_all.py --case case-008 --runs 1`
+to test a human case interactively in the terminal (also 009 or 010). Add
+`--include-authored` to include the legacy corpus. `--compare` measures a fixed uniform/lexical baseline on the
 same unlabelled model cases; it does not give that baseline hidden labels. This
 model-case comparator lives in the eval harness; the web rule-based option retains
 the legacy checklist. Offline scripted-client tests verify contracts and reachable
@@ -184,7 +210,7 @@ against the version you intend to publish.
 - `src/agent.py`, `system_prompt.md`, `skills/`: native tool-use driver and playbooks.
 - `src/loop.py`, `src/state.py`, `src/tools.py`: execution, working memory and world.
 - `src/judge.py`, `src/evaluator.py`: evidence review versus hidden-truth scoring.
-- `cases/case_011.json`–`case_013.json`: model-inference worlds.
+- `cases/case_008.json`–`case_013.json`: model-inference worlds; 008–010 have human witnesses.
 - `src/session_codec.py`, `src/session_store.py`: conversation/state persistence.
 - `app.py`, `web/`: web API, trace view and board view.
 - `eval/run_all.py`, `eval/model_baseline.py`: live evaluation and measured comparator.
@@ -197,8 +223,9 @@ against the version you intend to publish.
 The conversation is append-only, with prompt caching but no compaction. Sessions use
 memory locally or Redis when configured. Session schema is now version 2: start a
 new investigation rather than resume an older model session with auto-revealed facts.
+An older human session whose case changed from authored to model inference is also
+rejected with a restart message; its preassigned weights cannot enter a new-model run.
 
 For hosting configuration see [DEPLOYMENT](docs/DEPLOYMENT.md). Before exposing an API
 key-backed deployment, configure the optional access gate and session-start spend cap.
 Set `ANTHROPIC_API_KEY` in Vercel Environment Variables, never in committed files.
-No deployment is part of this change.

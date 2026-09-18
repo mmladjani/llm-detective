@@ -1,4 +1,6 @@
-"""Phase 0 — measurement foundation.
+"""Legacy authored-case evaluation and run-history report.
+
+For the model-inference comparator, use eval/run_all.py --compare.
 
 Run ALL cases × N, for both the AGENT (llm) and the BASELINE (rule_based), compute
 the central KPI (agent-vs-baseline gap), and write:
@@ -93,7 +95,7 @@ def main():
     ap.add_argument("--case", default=None)
     ap.add_argument("--baseline-only", action="store_true")
     ap.add_argument("--include-generated", action="store_true",
-                    help="include cases/generated/ too (complex cases, Phase 1)")
+                    help="include cases/generated/ too (authored legacy cases)")
     ap.add_argument("--no-save", action="store_true", help="do not write history records")
     args = ap.parse_args()
 
@@ -153,7 +155,7 @@ def _report_md(payload: dict) -> str:
     o = payload["overall"]
     a = o.get("agent")
     b = o.get("baseline")
-    lines = ["# trace — Baseline report (Phase 0)", ""]
+    lines = ["# LLM Detective — Legacy baseline report", ""]
     lines.append(f"Runs per case: **{payload['runs_per_case']}**  ·  "
                  f"agent included: **{'yes' if payload['have_agent'] else 'no (no key)'}**")
     lines.append("")

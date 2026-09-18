@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 2 — information-quality (info-gain) report from history.
+"""Information-quality (info-gain) report from saved run records.
 
 Measures whether the agent chose INFORMATIVE moves: wasted_action_rate (wasted moves) and
 info_efficiency (hypothesis moves per action). Works OFFLINE over existing history
@@ -38,8 +38,8 @@ def main() -> None:
         q = metrics.info_quality_over_records(recs)
         print(f"{mode:<14}{q['runs']:<7}{str(q['avg_wasted_rate']):<14}"
               f"{str(q['avg_info_efficiency']):<11}{q['avg_actions']}")
-    print("\nLower wasted_rate + higher info_efficiency = better info-gain planning "
-          "(the point of Phase 2). Compare llm against the rule_based baseline.")
+    print("\nThese metrics count state changes, not semantic correctness. "
+          "Compare drivers only on matched cases, inference rules and settings.")
 
 
 if __name__ == "__main__":

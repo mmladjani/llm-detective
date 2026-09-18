@@ -1,6 +1,6 @@
 """Native tool_use agent — the default LLM driver (src/agent.py).
 
-The same Anthropic pattern as the other three apps: the model receives the tool
+The model receives the Anthropic tool
 schemas, picks ONE tool per turn as a `tool_use` block, Python executes it through
 the engine (`GameSession.execute_decision` — legality, budget, state, audit), and
 the result goes back as `tool_result`. The model also:
@@ -11,7 +11,7 @@ the result goes back as `tool_result`. The model also:
     a critique and the agent revises (bounded by MAX_REVISES).
 
 `iter_agent(case_id)` is a generator yielding the shared event vocabulary
-(input / think / tool / gate / final) used by every app in this repo.
+(input / think / tool / gate / final) used by the CLI and web views.
 """
 
 from __future__ import annotations
@@ -33,28 +33,14 @@ MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 MAX_REVISES = int(os.environ.get("AGENT_MAX_REVISES", "2"))
 MAX_MODEL_CALLS = int(os.environ.get("AGENT_MAX_MODEL_CALLS", "40"))
 
-# Room to actually reason. The original 1000 was enough to emit a tool call and a
-# sentence of justification, which quietly capped the very thing this app exists to
-# show. Extended thinking is on by default and its trace is surfaced as `think`
-# events, so the reasoning is auditable rather than implied.
+# Extended thinking is enabled by default and surfaced as `think` events.
 MAX_TOKENS = int(os.environ.get("AGENT_MAX_TOKENS", "4000"))
 THINKING_BUDGET = int(os.environ.get("AGENT_THINKING_BUDGET", "2000"))
 
 
-# Prompt caching. The transcript is append-only and every turn re-sends the whole
-# prefix, so without this the same tokens are billed at full price on all 19-25 calls
-# a run makes: measured 156,287 input tokens for one 11-action case, growing 3.9k ->
-# 13.3k per call. Top-level `cache_control` auto-places the breakpoint on the last
-# cacheable block and walks it forward as the transcript grows — the documented
-# pattern for a multi-turn loop, and it needs no reordering of this prompt because the
-# stable part (system + tool schemas, ~3.9k tokens, above the model's 1024 minimum)
-# already renders first. Measured: input token cost -82%, whole-run cost -72%.
-#
-# TTL: the default 5-minute entry is measured from the START of a request, so a CLI or
-# eval run keeps it warm by itself (turns are seconds apart) at the cheaper 1.25x
-# write. A deployed step-by-step UI is the opposite case — the gap between steps is
-# however long a person takes to read the trace — so set AGENT_CACHE_TTL=1h there, or
-# the entry expires mid-investigation and the next step re-pays for the whole history.
+# The transcript is append-only; prompt caching can reuse its stable prefix.
+# AGENT_CACHE_TTL optionally sets the provider cache lifetime. Caching does not
+# compact the conversation, and investigator counters exclude cache token fields.
 CACHE_TTL = os.environ.get("AGENT_CACHE_TTL", "").strip()
 
 

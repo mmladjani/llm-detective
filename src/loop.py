@@ -8,8 +8,9 @@ an investigator, and the audit trace. The loop is responsible for:
   or synthesize a final report.
 
 Stopping conditions live here (check_stop) so they are enforced identically no matter
-which investigator drives the run. The investigator can never exceed the budget or
-manufacture a conclusion the evidence does not support.
+which investigator drives the run. World actions cannot exceed the budget. Native
+LLM conclusions require judge acceptance, but semantic review can still accept an
+unsupported interpretation.
 """
 
 from __future__ import annotations

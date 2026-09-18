@@ -1,7 +1,8 @@
-# What TRACE demonstrates — and what it does not
+# What LLM Detective demonstrates — and what it does not
 
-The primary demo is now the native LLM driver on model-inference cases 011–013.
-Authored cases 001–010 remain comparison fixtures, not evidence of model inference.
+The primary demo is the native LLM driver on model-inference cases 008–013.
+Cases 008–010 include human witnesses. Authored cases 001–007 remain legacy
+fixtures, not evidence of model inference; the web UI keeps them in Legacy mode.
 
 ## Model-controlled decisions inside a deterministic environment
 
@@ -61,13 +62,20 @@ error. A high score on one small case is not general reasoning evidence.
 
 ## Measured deterministic comparison
 
+The AI and Legacy dropdowns expose different case sets for demonstration. Scores
+from different cases are not a controlled LLM-versus-deterministic comparison:
+the evidence, difficulty and inference rules differ. A measurement must hold the
+case version, available public information, world-action budget and evaluator
+constant. Human-interview comparisons also need a controlled answer policy.
+Report the chosen baseline and repeated LLM outcomes; a gain over a naive baseline
+does not establish a gain over every deterministic approach.
+
 Verified with `python eval/run_all.py --mode rule_based --runs 1` (2026-09-18):
 
 | Cases | Policy | Score |
 |---|---|---|
 | 001–005 | authored checklist | 90 / 89 / 90 / 91 / 85 |
 | 006–007 | authored checklist | 5 / 5 |
-| 008–010 | authored checklist | 90 / 90 / 90 |
 | 011 | uniform/lexical | 68 |
 | 012 | uniform/lexical | 71 |
 | 013 | uniform/lexical | 52 |
@@ -77,7 +85,9 @@ positive weight to the first named suspect, and uses lexical matching/first-cand
 fallback for facts. It does not interpret exculpatory language or read hidden truth.
 It is intentionally naive, not the strongest possible deterministic solver. Its
 `solved` status means its own heuristic stopped; inspect correctness and score too.
-The web baseline still uses the legacy checklist; this comparator is eval-only.
+The web Legacy mode uses the old checklist on cases 001–007; this comparator is
+eval-only. The earlier authored scores for 008–010 do not describe their converted
+model-inference versions. No web side-by-side comparison is promised.
 
 Use `--compare --runs N` for actual LLM-versus-baseline measurements. Offline tests
 with scripted clients prove that legal solution and revision paths exist, not that
@@ -85,14 +95,41 @@ a model discovers them. Small samples do not establish reliability.
 
 ## Live validation limits
 
+After converting human cases to model inference (2026-09-19), 559 offline tests
+passed and one was skipped. The browser activity controller has 18 offline Node.js
+checks. Three real `claude-sonnet-4-5` investigations ran through
+the web API's start, step, answer and evaluation handlers, restoring the persisted
+session between requests. Each case ran once; human replies were scripted fixtures,
+not an actual participant or another LLM. The investigator chose whether to interview.
+
+| Case | Judge result | Correct answer fields | Human replies | Score |
+|---|---|---|---|---|
+| 008 | accepted | 6/6 | 2 cooperative replies | 85 |
+| 009 | accepted | 6/6 | 1 refusal | 83 |
+| 010 | accepted | 5/6: time wrong | none requested | 83 |
+
+None used deterministic fallback or needed a rejected-proposal revision. Thus these
+runs exercised autonomous collection and human pause/resume, but did not demonstrate
+self-correction. Case 008 omitted one evaluator-required record (`obj_override`);
+009 omitted two (`al_davis_alone`, `obj_key_davis`). These labels affect only the
+post-run evaluator; the judge does not receive them.
+
+**Known unresolved review failure:** in case 010 the agent retained `17:30`, when
+Carmen selected the boxes, as the incident time after collecting the bin-opening
+record at `18:00`. The final narrative mentioned both events, but the stored time
+remained `17:30`. The judge accepted it without an objection; the evaluator marked
+time wrong against `18:00`. This is not a passing full-answer test or evidence of a
+calibrated judge. A follow-up should clarify event-time semantics and test supported
+and unsupported time assertions without revealing the answer to the reviewer.
+
 Validation on 2026-09-18 with `claude-sonnet-4-5`:
 
-- Final code: 542 offline tests passed, one skipped. Scripted tests check plumbing,
+- Before the human-case conversion: 542 offline tests passed, one skipped. Scripted tests check plumbing,
   not semantic quality.
-- Final code: nine reviewer controls run twice matched all 18 expected outcomes;
+- Before the human-case conversion: nine reviewer controls run twice matched all 18 expected outcomes;
   seven auditor controls run twice matched all 14. These include accepting corrected
   assessments while rejecting explicit unsupported manufacture/acquisition claims.
-- Final code: case 011 solved on its first review, scored 90, used 6/11 world actions,
+- Before the human-case conversion: case 011 solved on its first review, scored 90, used 6/11 world actions,
   matched all six answer fields and collected every required evidence record.
 - Two earlier case-011 trials in this fix also solved at 90; case 012 solved at 80
   but omitted the optional motive; case 013 solved at 86 with all answer fields and
@@ -124,12 +161,13 @@ review of errors—not only more tuning on these cases.
 - Browser controls prevent concurrent turns from one view. Server-side distributed
   per-session locking is not implemented; concurrent API clients remain a risk.
 - Board view excludes human-interview cases because it has no answer panel. The main
-  view exposes cases 008–010 in a dedicated group. Their tool selection can be LLM-driven,
-  but their evidence weights remain authored; do not present them as model-inference cases.
+  view includes 008–010 in the AI case list with a witness-participation label.
+  They use model-owned interpretation, including noticing changes in a human's story.
+  Engine-side role-card checks are heuristic and are not supplied to the model.
 
 ## Deployment boundary
 
 Optional Basic authentication and a session-start rate cap exist, but are inactive
 unless configured. A session-start cap is not a token-level billing cap. Redis/backend
-deployment behavior was not live-tested during this change. Old schema-1 sessions are
+deployment behavior needs validation on the target deployment. Old schema-1 sessions are
 rejected with a restart message because they lack the new inference/review contract.

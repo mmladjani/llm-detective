@@ -17,8 +17,9 @@ diaries, phase-completion reports or duplicate handoffs to the repository.
 
 ## Preserve the agentic loop
 
-- The primary demo is the native LLM driver on model-inference cases 011–013.
-  Cases 001–010 and the custom builder retain authored evidence for comparison.
+- The primary demo is the native LLM driver on model-inference cases 008–013;
+  008–010 include human witnesses. Cases 001–007 and the custom builder retain
+  authored evidence as legacy examples. Do not expose hybrid runs in the demo UI.
 - The model chooses tools, arguments, evidence assessments, fact assertions and when
   to submit a conclusion. Python owns execution, legality, budgets and state storage.
   Do not hard-code a solution path, culprit or mandatory correction sequence to make
@@ -47,6 +48,7 @@ From the repository root, with dependencies already installed:
 .venv/bin/python app.py serve
 # Local UI: http://127.0.0.1:8000
 .venv/bin/python -m pytest -q --maxfail=5 -p no:cacheprovider
+node --test tests/web_activity.test.cjs  # optional Node.js; no npm install
 ```
 
 Do not interrupt an existing server or a user's active investigation without asking.
@@ -69,6 +71,11 @@ actual commands, run counts, accepted/rejected outcomes, evaluator results and f
 Do not claim a fully calibrated judge from a few successful examples. Preserve failed
 live results and distinguish API/transport failures from semantic review failures.
 CLI/eval artifacts go under ignored `outputs/`; do not commit them or credentials.
+
+The AI and Legacy UI lists use different case sets. Do not present their scores as
+a controlled performance comparison. Use the same case version, public records,
+budget and evaluator for both drivers; document the baseline and witness-answer
+policy. The eval comparator is intentionally naive, not a universal deterministic solver.
 
 ## Secrets and deployment
 
