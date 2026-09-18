@@ -1,0 +1,275 @@
+{
+ "case_id": "case-003",
+ "title": "The Gallery Theft",
+ "difficulty": "insufficient evidence",
+ "short_description": "A painting vanished during a crowded reception. Several people look suspicious, but nothing can be pinned down.",
+ "budget": 12,
+ "incident_report": "During a crowded 19:00-20:00 donor reception, a small painting disappeared from the gallery hall. Dozens of guests came and went. Three people drew attention afterward: Noor (a donor with money troubles), Priya (a guide who knew the alarm code), and Felix (a contractor with earlier access). The gallery wants to know who took it and how.",
+ "index": {
+  "suspects": [
+   "noor",
+   "priya",
+   "felix"
+  ],
+  "location": "gallery_hall",
+  "time_window": {
+   "from": "19:00",
+   "to": "20:00"
+  },
+  "objects": [
+   "alarm_panel",
+   "guest_log"
+  ],
+  "characters": [
+   {
+    "id": "noor",
+    "name": "Noor",
+    "role": "donor"
+   },
+   {
+    "id": "priya",
+    "name": "Priya",
+    "role": "gallery guide"
+   },
+   {
+    "id": "felix",
+    "name": "Felix",
+    "role": "contractor"
+   }
+  ],
+  "locations": [
+   {
+    "id": "gallery_hall",
+    "name": "Gallery Hall"
+   },
+   {
+    "id": "lobby",
+    "name": "Lobby"
+   }
+  ]
+ },
+ "hidden_truth": {
+  "culprit": "noor",
+  "action": "stole_painting",
+  "method": "disabled_alarm",
+  "location": "gallery_hall",
+  "time": "19:30",
+  "motive": "debt"
+ },
+ "required_evidence": [
+  "cam_hall",
+  "al_hall",
+  "obj_alarm_owner"
+ ],
+ "evaluation": {
+  "expected_status": "unresolved",
+  "solvable": false
+ },
+ "tools": {
+  "read_incident_report": {
+   "observation": "A painting was taken from the gallery hall during a 19:00-20:00 reception with dozens of guests. Persons of interest: Noor (donor, in debt), Priya (guide, knew the code), Felix (contractor, earlier access).",
+   "evidence": []
+  },
+  "check_access_log": {
+   "gallery_hall": {
+    "observation": "The electronic access log was switched off for the open-door reception. There are no reliable entry records for the hall during the event.",
+    "evidence": [
+     {
+      "id": "al_hall",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "access",
+      "reveals": {},
+      "description": "Access log was disabled for the reception — no usable entry records."
+     }
+    ]
+   }
+  },
+  "review_camera": {
+   "gallery_hall": {
+    "observation": "The hall camera was offline for scheduled maintenance from 19:10 onward. A single 19:05 frame shows only a dense crowd.",
+    "evidence": [
+     {
+      "id": "cam_hall",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "camera",
+      "reveals": {},
+      "description": "Camera went offline at 19:10; only a crowded 19:05 frame exists — no usable footage."
+     }
+    ]
+   }
+  },
+  "inspect_location": {
+   "gallery_hall": {
+    "observation": "The painting's alarm was off, but staff routinely leave it off during events. No forced entry, no fingerprints of note, no clear trace.",
+    "evidence": [
+     {
+      "id": "loc_hall",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "scene",
+      "reveals": {},
+      "description": "Alarm was off, but that is routine during events — not incriminating on its own."
+     }
+    ]
+   }
+  },
+  "analyze_object": {
+   "alarm_panel": {
+    "observation": "The alarm was disabled manually using a staff code that is shared among several employees. It cannot be tied to any one person.",
+    "evidence": [
+     {
+      "id": "obj_alarm_owner",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "object",
+      "reveals": {
+       "method": "disabled_alarm"
+      },
+      "description": "Alarm disabled with a shared staff code — the method is clear but not attributable to anyone."
+     }
+    ]
+   },
+   "guest_log": {
+    "observation": "The paper guest log shows Noor, Priya, and Felix all signed in, along with dozens of others. Nothing stands out.",
+    "evidence": [
+     {
+      "id": "obj_log",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "object",
+      "reveals": {},
+      "description": "Guest log is unremarkable; all three signed in among many others."
+     }
+    ]
+   }
+  },
+  "interview_character": {
+   "noor": {
+    "observation": "Noor admits she has debts and was seen lingering near the painting, but so were many guests. She denies taking it.",
+    "evidence": [
+     {
+      "id": "int_noor",
+      "supports": "noor",
+      "weight": 0.18,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {
+       "motive": "debt"
+      },
+      "raises_question": {
+       "suspect": "noor",
+       "note": "Noor had debts and lingered near the painting — but nothing places her act."
+      },
+      "description": "Noor had money troubles and lingered near the painting (circumstantial only)."
+     }
+    ]
+   },
+   "priya": {
+    "observation": "Priya knew the alarm code and seemed nervous when questioned, but many staff knew the code.",
+    "evidence": [
+     {
+      "id": "int_priya",
+      "supports": "priya",
+      "weight": 0.15,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {},
+      "raises_question": {
+       "suspect": "priya",
+       "note": "Priya knew the code and seemed nervous — but so did other staff."
+      },
+      "description": "Priya knew the alarm code and appeared nervous (circumstantial only)."
+     }
+    ]
+   },
+   "felix": {
+    "observation": "Felix had unsupervised access earlier in the day and left the reception early, but a colleague thinks he was gone before the theft.",
+    "evidence": [
+     {
+      "id": "int_felix",
+      "supports": "felix",
+      "weight": 0.15,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {},
+      "raises_question": {
+       "suspect": "felix",
+       "note": "Felix had earlier access and left early — timing unclear."
+      },
+      "description": "Felix had earlier access and left early; timing is unclear (circumstantial only)."
+     }
+    ]
+   }
+  },
+  "verify_alibi": {
+   "noor": {
+    "observation": "With no footage and a full room, Noor's whereabouts during the theft cannot be confirmed or refuted.",
+    "evidence": [
+     {
+      "id": "alibi_noor",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "alibi",
+      "reveals": {},
+      "resolves_question": "noor",
+      "description": "Noor's whereabouts during the theft can be neither confirmed nor refuted."
+     }
+    ]
+   },
+   "priya": {
+    "observation": "Priya says she was greeting guests at the door; a couple of visitors vaguely agree, but no one is certain.",
+    "evidence": [
+     {
+      "id": "alibi_priya",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "alibi",
+      "reveals": {},
+      "resolves_question": "priya",
+      "description": "Priya's door-greeting alibi is weakly supported but unverifiable."
+     }
+    ]
+   },
+   "felix": {
+    "observation": "A colleague thinks Felix left around 19:20, but she is unsure of the time. It neither clears nor implicates him.",
+    "evidence": [
+     {
+      "id": "alibi_felix",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "alibi",
+      "reveals": {},
+      "resolves_question": "felix",
+      "description": "Felix may have left at 19:20, but the timing is uncertain."
+     }
+    ]
+   }
+  },
+  "compare_testimonies": {
+   "noor|priya": {
+    "observation": "Noor and Priya each hint the other seemed suspicious, but neither offers anything verifiable.",
+    "evidence": [
+     {
+      "id": "cmp_np",
+      "supports": null,
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {},
+      "description": "Mutual suspicion between Noor and Priya, but nothing verifiable."
+     }
+    ]
+   }
+  }
+ }
+}

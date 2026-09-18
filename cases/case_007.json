@@ -1,0 +1,384 @@
+{
+  "case_id": "case-007",
+  "title": "The Scheduler Leak",
+  "difficulty": "llm advantage",
+  "short_description": "A clinic schedule export was hidden among routine desk artifacts. The decisive object is named in the report but appears late in the fixed scan order, so a semantic agent can beat the deterministic baseline.",
+  "budget": 6,
+  "incident_report": "Between 08:05 and 08:20, a clinic appointment list was exported from the scheduling office. The export job was labeled 'nightingale_patch', a phrase from a recent argument about Luca's triage metrics. Staff with access: Iris (front desk), Jovan (billing), Keira (nurse coordinator), Luca (analytics contractor), and Mina (office manager). The office contains many ordinary desk artifacts, but only the scheduler terminal would preserve the export label.",
+  "index": {
+    "suspects": [
+      "iris",
+      "jovan",
+      "keira",
+      "luca",
+      "mina"
+    ],
+    "location": "scheduling_office",
+    "time_window": {
+      "from": "08:05",
+      "to": "08:20"
+    },
+    "objects": [
+      "lobby_signin_sheet",
+      "shred_bin",
+      "spare_keyboard",
+      "scheduler_terminal",
+      "parking_stub",
+      "audit_token"
+    ],
+    "characters": [
+      {
+        "id": "iris",
+        "name": "Iris",
+        "role": "front desk"
+      },
+      {
+        "id": "jovan",
+        "name": "Jovan",
+        "role": "billing"
+      },
+      {
+        "id": "keira",
+        "name": "Keira",
+        "role": "nurse coordinator"
+      },
+      {
+        "id": "luca",
+        "name": "Luca",
+        "role": "analytics contractor"
+      },
+      {
+        "id": "mina",
+        "name": "Mina",
+        "role": "office manager"
+      }
+    ],
+    "locations": [
+      {
+        "id": "scheduling_office",
+        "name": "Scheduling Office"
+      },
+      {
+        "id": "front_lobby",
+        "name": "Front Lobby"
+      }
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "luca",
+    "action": "exported_appointment_list",
+    "method": "scheduler_terminal_export",
+    "location": "scheduling_office",
+    "time": "08:12",
+    "motive": "manipulate_triage_metrics"
+  },
+  "required_evidence": [
+    "al_luca_remote",
+    "loc_triage_motive",
+    "obj_scheduler_export",
+    "alibi_luca_broken"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true,
+    "baseline_expected": "budget_exhausted"
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "The appointment list was exported between 08:05 and 08:20. The job label 'nightingale_patch' points to the scheduling terminal, and the phrase echoes Luca's recent triage-metrics dispute.",
+      "evidence": [
+        {
+          "id": "rep_luca_phrase",
+          "supports": "luca",
+          "weight": 0.0,
+          "relates_to_incident": true,
+          "independent_type": "statement",
+          "reveals": {},
+          "description": "The export label repeats a phrase from Luca's triage-metrics dispute.",
+          "raises_question": {
+            "suspect": "luca",
+            "note": "Luca says the 'nightingale_patch' phrase was only a harmless metrics label; verify it against the terminal export."
+          }
+        }
+      ]
+    },
+    "check_access_log": {
+      "scheduling_office": {
+        "observation": "Remote-access logs show Luca's contractor token opening the scheduling office terminal at 08:12. Iris and Mina were logged into front-desk systems; Jovan and Keira had no scheduling-office session.",
+        "evidence": [
+          {
+            "id": "al_luca_remote",
+            "supports": "luca",
+            "weight": 0.24,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {
+              "time": "08:12"
+            },
+            "description": "Luca's contractor token opened the scheduling terminal at 08:12."
+          },
+          {
+            "id": "al_jovan_absent",
+            "supports": "jovan",
+            "weight": -0.1,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {},
+            "description": "Jovan had no scheduling-office session during the export window."
+          },
+          {
+            "id": "al_keira_absent",
+            "supports": "keira",
+            "weight": -0.1,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {},
+            "description": "Keira had no scheduling-office session during the export window."
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "scheduling_office": {
+        "observation": "Camera footage only covers the corridor. Iris enters the lobby twice with patient forms, but no camera sees the terminal screen.",
+        "evidence": [
+          {
+            "id": "cam_iris_lobby",
+            "supports": "iris",
+            "weight": 0.12,
+            "relates_to_incident": true,
+            "independent_type": "camera",
+            "reveals": {},
+            "description": "Iris appears in the lobby with forms, a weak corridor-only clue."
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "scheduling_office": {
+        "observation": "The desk has a sticky note about triage-score weighting and a draft complaint over Luca's analytics contract. No paper copy of the exported list is present.",
+        "evidence": [
+          {
+            "id": "loc_triage_motive",
+            "supports": "luca",
+            "weight": 0.14,
+            "relates_to_incident": true,
+            "independent_type": "scene",
+            "reveals": {
+              "action": "exported_appointment_list",
+              "motive": "manipulate_triage_metrics"
+            },
+            "description": "The office notes tie the export to Luca's triage-metrics dispute."
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "lobby_signin_sheet": {
+        "observation": "The lobby sign-in sheet is crowded and handwritten. It does not record terminal use.",
+        "evidence": [
+          {
+            "id": "obj_signin_crowded",
+            "supports": null,
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "The lobby sign-in sheet cannot identify the export."
+          }
+        ]
+      },
+      "shred_bin": {
+        "observation": "The shred bin contains old insurance forms, all dated before the export.",
+        "evidence": [
+          {
+            "id": "obj_shred_old",
+            "supports": "mina",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "The shredded insurance forms predate the appointment-list export."
+          }
+        ]
+      },
+      "spare_keyboard": {
+        "observation": "The spare keyboard has Keira's fingerprints, but she used it during a documented replacement two days earlier.",
+        "evidence": [
+          {
+            "id": "obj_keyboard_stale",
+            "supports": "keira",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Keira's fingerprints on the spare keyboard are stale."
+          }
+        ]
+      },
+      "scheduler_terminal": {
+        "observation": "The terminal history shows the 'nightingale_patch' export at 08:12, run under Luca's contractor token and saved to an external analytics endpoint.",
+        "evidence": [
+          {
+            "id": "obj_scheduler_export",
+            "supports": "luca",
+            "weight": 0.26,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {
+              "method": "scheduler_terminal_export"
+            },
+            "description": "The scheduler terminal ran the 'nightingale_patch' export under Luca's contractor token."
+          }
+        ]
+      },
+      "parking_stub": {
+        "observation": "The parking stub belongs to Jovan but is dated from the previous afternoon.",
+        "evidence": [
+          {
+            "id": "obj_parking_stale",
+            "supports": "jovan",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Jovan's parking stub is stale and unrelated."
+          }
+        ]
+      },
+      "audit_token": {
+        "observation": "The audit token was checked out to Mina last month for compliance testing and was not active during the export.",
+        "evidence": [
+          {
+            "id": "obj_audit_token_inactive",
+            "supports": "mina",
+            "weight": -0.08,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Mina's audit token was inactive during the export."
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "iris": {
+        "observation": "Iris says she handled lobby patients and did not use the scheduling terminal.",
+        "evidence": [
+          {
+            "id": "int_iris_lobby",
+            "supports": "iris",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Iris reports routine lobby work."
+          }
+        ]
+      },
+      "jovan": {
+        "observation": "Jovan says he was in billing and had no reason to touch appointment scheduling.",
+        "evidence": [
+          {
+            "id": "int_jovan_billing",
+            "supports": "jovan",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Jovan reports routine billing work."
+          }
+        ]
+      },
+      "keira": {
+        "observation": "Keira says she was coordinating nurses and did not enter the scheduling office.",
+        "evidence": [
+          {
+            "id": "int_keira_nurses",
+            "supports": "keira",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Keira reports nurse-coordination work."
+          }
+        ]
+      },
+      "luca": {
+        "observation": "Luca says 'nightingale_patch' was only a harmless metrics label and that no appointment data left the clinic.",
+        "evidence": [
+          {
+            "id": "int_luca_label",
+            "supports": "luca",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Luca says the phrase was harmless and no data was exported."
+          }
+        ]
+      },
+      "mina": {
+        "observation": "Mina says she was preparing compliance files and did not authorize analytics exports.",
+        "evidence": [
+          {
+            "id": "int_mina_compliance",
+            "supports": "mina",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Mina reports compliance-file work."
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "luca": {
+        "observation": "Luca's explanation fails: endpoint logs confirm that the 'nightingale_patch' job exported live appointments to his analytics endpoint.",
+        "evidence": [
+          {
+            "id": "alibi_luca_broken",
+            "supports": "luca",
+            "weight": 0.12,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Luca's harmless-label explanation is contradicted by endpoint logs.",
+            "resolves_question": "luca"
+          }
+        ]
+      },
+      "iris": {
+        "observation": "Iris's lobby activity is confirmed by patient check-ins.",
+        "evidence": [
+          {
+            "id": "alibi_iris_lobby",
+            "supports": "iris",
+            "weight": -0.08,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Iris remained at the front lobby during the export."
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "iris|luca": {
+        "observation": "Iris's lobby account is routine; Luca's harmless-label account conflicts with endpoint logs.",
+        "evidence": [
+          {
+            "id": "cmp_iris_luca",
+            "supports": "luca",
+            "weight": 0.04,
+            "relates_to_incident": true,
+            "independent_type": "testimony",
+            "reveals": {},
+            "description": "Comparing Iris and Luca leaves Luca's export explanation unsupported."
+          }
+        ]
+      }
+    }
+  }
+}

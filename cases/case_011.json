@@ -1,0 +1,236 @@
+{
+  "case_id": "case-011",
+  "title": "The Vanished Manuscript (unlabelled)",
+  "difficulty": "model must weigh the evidence",
+  "short_description": "The same archive swap as case-001, with one difference: the evidence arrives with no attribution and no weights. The agent must decide what each record means and how much it counts.",
+  "budget": 11,
+  "inference": "model",
+  "incident_report": "Between 21:10 and 21:20 last night, a rare medieval manuscript in the archive room was swapped for a convincing forgery. Nothing was forced. Three staff members had legitimate reason to be nearby: Mara (senior archivist), Idris (curator), and Lena (conservator). The forgery was only discovered this morning.",
+  "index": {
+    "suspects": [
+      "mara",
+      "idris",
+      "lena"
+    ],
+    "location": "archive_room",
+    "time_window": {
+      "from": "21:10",
+      "to": "21:20"
+    },
+    "objects": [
+      "access_card",
+      "manuscript_case"
+    ],
+    "characters": [
+      {
+        "id": "mara",
+        "name": "Mara",
+        "role": "senior archivist"
+      },
+      {
+        "id": "idris",
+        "name": "Idris",
+        "role": "curator"
+      },
+      {
+        "id": "lena",
+        "name": "Lena",
+        "role": "conservator"
+      }
+    ],
+    "locations": [
+      {
+        "id": "archive_room",
+        "name": "Archive Room"
+      },
+      {
+        "id": "main_hall",
+        "name": "Main Hall"
+      }
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "mara",
+    "action": "replaced_manuscript",
+    "method": "copied_access_card",
+    "location": "archive_room",
+    "time": "21:17",
+    "motive": "hide_forgery"
+  },
+  "required_evidence": [
+    "al_mara_entry",
+    "cam_mara",
+    "obj_card"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "A rare manuscript was swapped for a forgery in the archive room between 21:10 and 21:20. No forced entry. Staff of interest: Mara (archivist), Idris (curator), Lena (conservator).",
+      "evidence": []
+    },
+    "check_access_log": {
+      "archive_room": {
+        "observation": "Access log for the archive: a single entry at 21:17 using Mara's card. No other entries during the window. Idris's card was last used at 20:40 in the main hall.",
+        "evidence": [
+          {
+            "id": "al_mara_entry",
+            "independent_type": "access",
+            "description": "Mara's access card opened the archive at 21:17 — inside the incident window."
+          },
+          {
+            "id": "al_idris_absent",
+            "independent_type": "access",
+            "description": "Idris's card was in the main hall at 20:40; he never entered the archive during the window."
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "archive_room": {
+        "observation": "Hallway camera at 21:16 shows Mara approaching the archive door carrying a flat manuscript case. No one else appears in frame during the window.",
+        "evidence": [
+          {
+            "id": "cam_mara",
+            "independent_type": "camera",
+            "description": "Camera places Mara at the archive door at 21:16 carrying a flat case."
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "archive_room": {
+        "observation": "The display case was opened without force. In the bin: a shredded printout of a forged provenance letter — someone was covering up a forgery. Also found: Lena's library request slip, but dated the previous day.",
+        "evidence": [
+          {
+            "id": "loc_forgery",
+            "independent_type": "scene",
+            "description": "A shredded provenance letter in the bin contains a rejected authentication of the displayed manuscript. The replacement has modern ink."
+          },
+          {
+            "id": "loc_lena_slip",
+            "independent_type": "scene",
+            "description": "Lena's request slip in the room is dated the previous day."
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "access_card": {
+        "observation": "The reader shows Mara's badge ID was duplicated: the same ID badged in two buildings five minutes apart. The archive entry at 21:17 used the duplicate; the log identifies a credential, not its holder.",
+        "evidence": [
+          {
+            "id": "obj_card",
+            "independent_type": "object",
+            "description": "The archive reader identifies the 21:17 credential as a duplicate of Mara's access card."
+          }
+        ]
+      },
+      "manuscript_case": {
+        "observation": "The forgery was slipped in using a manuscript case only archivists handle. Fibers on the case match Mara's gloves.",
+        "evidence": [
+          {
+            "id": "obj_case",
+            "independent_type": "object",
+            "description": "The forgery was placed with an archivist's case; fibers match Mara."
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "mara": {
+        "observation": "Mara says she left the building at 21:00 and did not return.",
+        "evidence": [
+          {
+            "id": "int_mara",
+            "independent_type": "statement",
+            "raises_question": {
+              "suspect": "mara",
+              "note": "Mara claims she left at 21:00 — but the badge log says 21:17. Verify."
+            },
+            "description": "Mara claims she left at 21:00 and never returned."
+          }
+        ]
+      },
+      "idris": {
+        "observation": "Idris says he was cataloguing in the main hall all evening.",
+        "evidence": [
+          {
+            "id": "int_idris",
+            "independent_type": "statement",
+            "description": "Idris says he was in the main hall all evening."
+          }
+        ]
+      },
+      "lena": {
+        "observation": "Lena says she had already gone home; she resents Mara over a past dispute but denies any involvement.",
+        "evidence": [
+          {
+            "id": "int_lena",
+            "independent_type": "statement",
+            "description": "Lena resents Mara but says she was already home (unrelated grudge)."
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "mara": {
+        "observation": "Mara's claim that she left at 21:00 is false: her badge and the hallway camera both place her at the archive at 21:16-21:17.",
+        "evidence": [
+          {
+            "id": "alibi_mara_broken",
+            "independent_type": "alibi",
+            "resolves_question": "mara",
+            "description": "Mara's alibi is false; she was present at the moment of the swap."
+          }
+        ]
+      },
+      "idris": {
+        "observation": "Idris's alibi checks out: two colleagues confirm he was in the main hall.",
+        "evidence": [
+          {
+            "id": "alibi_idris_ok",
+            "independent_type": "alibi",
+            "description": "Idris's main-hall alibi is corroborated by two colleagues."
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "idris|mara": {
+        "observation": "Mara claims she left at 21:00; Idris and the badge log contradict her. Idris's account is consistent.",
+        "evidence": [
+          {
+            "id": "cmp_im",
+            "independent_type": "statement",
+            "description": "Mara's account conflicts with the badge log; Idris's is consistent."
+          }
+        ]
+      }
+    }
+  },
+  "fact_candidates": {
+    "action": [
+      "damaged_manuscript",
+      "replaced_manuscript",
+      "stole_manuscript"
+    ],
+    "method": [
+      "copied_access_card",
+      "forced_lock",
+      "borrowed_key"
+    ],
+    "motive": [
+      "sell_original",
+      "hide_forgery",
+      "personal_revenge"
+    ],
+    "time": [
+      "21:12",
+      "21:17",
+      "21:19"
+    ]
+  }
+}

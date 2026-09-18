@@ -1,0 +1,299 @@
+{
+  "case_id": "case-004",
+  "title": "The Gallery Hall Theft",
+  "difficulty": "custom",
+  "short_description": "A lying witness and a red herring make the obvious accusation premature. The judge rejects it until the open question is resolved — a self-correction demo.",
+  "budget": 12,
+  "incident_report": "Between 19:10 and 19:25 last night, a valuable item was taken from the gallery hall and a convincing substitute left in its place. Nothing was forced. Staff with reason to be nearby: Vera (staff member), Nikola (staff member), Sonja (staff member), Damir (staff member). It was discovered this morning.",
+  "index": {
+    "suspects": [
+      "vera",
+      "nikola",
+      "sonja",
+      "damir"
+    ],
+    "location": "gallery_hall",
+    "time_window": {
+      "from": "19:10",
+      "to": "19:25"
+    },
+    "objects": [
+      "access_card",
+      "display_case"
+    ],
+    "characters": [
+      {
+        "id": "vera",
+        "name": "Vera",
+        "role": "staff member"
+      },
+      {
+        "id": "nikola",
+        "name": "Nikola",
+        "role": "staff member"
+      },
+      {
+        "id": "sonja",
+        "name": "Sonja",
+        "role": "staff member"
+      },
+      {
+        "id": "damir",
+        "name": "Damir",
+        "role": "staff member"
+      }
+    ],
+    "locations": [
+      {
+        "id": "gallery_hall",
+        "name": "Gallery Hall"
+      },
+      {
+        "id": "main_hall",
+        "name": "Main Hall"
+      }
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "damir",
+    "action": "stole_the_item",
+    "method": "copied_access_card",
+    "location": "gallery_hall",
+    "time": "19:20",
+    "motive": "gambling_debts"
+  },
+  "required_evidence": [
+    "al_culprit",
+    "cam_culprit",
+    "obj_method"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "Between 19:10 and 19:25 last night, a valuable item was taken from the gallery hall and a convincing substitute left in its place. Nothing was forced. Staff with reason to be nearby: Vera (staff member), Nikola (staff member), Sonja (staff member), Damir (staff member). It was discovered this morning.",
+      "evidence": []
+    },
+    "check_access_log": {
+      "gallery_hall": {
+        "observation": "Access log for the gallery hall: a single entry at 19:20 using Damir's credentials. Vera's credentials were last used at 18:40 in the main hall.",
+        "evidence": [
+          {
+            "id": "al_culprit",
+            "supports": "damir",
+            "weight": 0.28,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {
+              "time": "19:20"
+            },
+            "description": "Damir's credentials used at the gallery hall at 19:20 — inside the incident window."
+          },
+          {
+            "id": "al_innocent_absent",
+            "supports": "vera",
+            "weight": -0.15,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {},
+            "description": "Vera never entered the gallery hall during the window."
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "gallery_hall": {
+        "observation": "Corridor camera at 19:20 shows Damir approaching the gallery hall. No one else appears in frame during the window.",
+        "evidence": [
+          {
+            "id": "cam_culprit",
+            "supports": "damir",
+            "weight": 0.26,
+            "relates_to_incident": true,
+            "independent_type": "camera",
+            "reveals": {},
+            "description": "Camera places Damir at the gallery hall at 19:20."
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "gallery_hall": {
+        "observation": "The scene shows no forced entry. Traces indicate the act was prepared in advance (gambling debts). Also found: an item belonging to Sonja, dated the previous day.",
+        "evidence": [
+          {
+            "id": "loc_method_trace",
+            "supports": "damir",
+            "weight": 0.1,
+            "relates_to_incident": true,
+            "independent_type": "scene",
+            "reveals": {
+              "action": "stole_the_item",
+              "motive": "gambling_debts"
+            },
+            "description": "Scene traces show how it was done and hint at why."
+          },
+          {
+            "id": "loc_herring",
+            "supports": "sonja",
+            "weight": 0.05,
+            "relates_to_incident": false,
+            "independent_type": "scene",
+            "reveals": {},
+            "description": "Sonja's personal item found at the scene — but dated before the incident; a coincidence."
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "access_card": {
+        "observation": "Analysis of the access card shows it was used to carry out the act — traces tie it to Damir.",
+        "evidence": [
+          {
+            "id": "obj_method",
+            "supports": "damir",
+            "weight": 0.2,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {
+              "method": "copied_access_card"
+            },
+            "description": "The access card ties the method to Damir."
+          }
+        ]
+      },
+      "display_case": {
+        "observation": "The display case carries secondary traces matching Damir.",
+        "evidence": [
+          {
+            "id": "obj_secondary",
+            "supports": "damir",
+            "weight": 0.18,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {
+              "action": "stole_the_item"
+            },
+            "description": "Secondary traces on the display case match Damir."
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "vera": {
+        "observation": "Vera insists they were at a late errand across town and had nothing to do with it.",
+        "evidence": [
+          {
+            "id": "int_vera",
+            "supports": "vera",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Vera's story sounds rehearsed.",
+            "raises_question": {
+              "suspect": "vera",
+              "note": "Vera's account should be verified."
+            }
+          }
+        ]
+      },
+      "nikola": {
+        "observation": "Nikola says they were doing routine work elsewhere all evening.",
+        "evidence": [
+          {
+            "id": "int_nikola",
+            "supports": "nikola",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Nikola reports a routine evening elsewhere."
+          }
+        ]
+      },
+      "sonja": {
+        "observation": "Sonja says they were doing routine work elsewhere all evening.",
+        "evidence": [
+          {
+            "id": "int_sonja",
+            "supports": "sonja",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Sonja reports a routine evening elsewhere."
+          }
+        ]
+      },
+      "damir": {
+        "observation": "Damir says they left the building at 19:00 and did not return.",
+        "evidence": [
+          {
+            "id": "int_damir",
+            "supports": "damir",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Damir claims they left at 19:00 and never returned.",
+            "raises_question": {
+              "suspect": "damir",
+              "note": "Damir claims they left at 19:00 — the records may say otherwise. Verify."
+            }
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "vera": {
+        "observation": "Vera's story is false — but only because they were at a private appointment they hid out of embarrassment. It is unrelated to the incident and they had no access.",
+        "evidence": [
+          {
+            "id": "alibi_vera_unrelated",
+            "supports": "vera",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Vera lied, but about something unrelated to the incident.",
+            "resolves_question": "vera"
+          }
+        ]
+      },
+      "damir": {
+        "observation": "Damir's claim is false: the records place them at the gallery hall at 19:20.",
+        "evidence": [
+          {
+            "id": "alibi_damir_broken",
+            "supports": "damir",
+            "weight": 0.15,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Damir's alibi is false; they were present at the moment of the incident.",
+            "resolves_question": "damir"
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "damir|vera": {
+        "observation": "Damir's account conflicts with the records; Vera's account is consistent.",
+        "evidence": [
+          {
+            "id": "cmp_pair",
+            "supports": "damir",
+            "weight": 0.05,
+            "relates_to_incident": true,
+            "independent_type": "testimony",
+            "reveals": {},
+            "description": "Damir's story is the one that conflicts with the record."
+          }
+        ]
+      }
+    }
+  }
+}

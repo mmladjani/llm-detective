@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LLM Detective - Board view</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--bg:#0f1216;--panel:#171c22;--line:#242b34;--text:#dbe4ee;--muted:#8b98a7;
+        --accent:#5aa9e6;--good:#7ee0a0;--bad:#f0a3a3;--warn:#e8c07d}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+  header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  h1{font-size:16px;margin:0} a{color:var(--accent)}
+  select,button{background:var(--panel);color:var(--text);border:1px solid var(--line);
+    border-radius:8px;padding:6px 10px;font:inherit}
+  button{cursor:pointer} button:disabled{opacity:.4;cursor:default}
+  button.primary{background:var(--accent);color:#08131c;border-color:var(--accent)}
+  .wrap{display:grid;grid-template-columns:1fr 330px;gap:12px;padding:12px 16px;max-width:1280px;margin:0 auto}
+  .stage{position:relative;background:linear-gradient(#141920,#10151b);border:1px solid var(--line);
+    border-radius:14px;height:560px;overflow:hidden}
+  .room{position:absolute;border:2px solid var(--line);border-radius:12px;padding:6px 10px;
+    color:var(--muted);font-size:12px;background:rgba(255,255,255,.02)}
+  .room.hot{border-color:var(--warn)}
+  .obj{position:absolute;font-size:22px;text-align:center;width:64px;transition:transform .3s}
+  .obj small{display:block;font-size:10px;color:var(--muted)}
+  .char{position:absolute;width:74px;text-align:center;transition:filter .3s}
+  .char .face{font-size:30px}
+  .char small{display:block;font-size:11px;color:var(--muted)}
+  .char.suspect-hot .face{filter:drop-shadow(0 0 8px var(--warn))}
+  .char.cleared{opacity:.45}
+  #agent{position:absolute;width:80px;text-align:center;font-size:34px;
+    transition:left 1s ease,top 1s ease;z-index:5}
+  #bubble{position:absolute;z-index:6;max-width:340px;background:#e9eef5;color:#15202b;
+    border-radius:12px;padding:8px 10px;font-size:12.5px;transition:left 1s ease,top 1s ease;
+    box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  #bubble:after{content:"";position:absolute;left:18px;bottom:-8px;border:8px solid transparent;border-top-color:#e9eef5}
+  #bubble .skill{font-weight:700;color:#20516e}
+  #bubble .obs{color:#405264;margin-top:4px;border-top:1px solid #cfd9e3;padding-top:4px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+  .panel h2{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .hyp{margin-bottom:8px;font-size:13px}
+  .bar{height:7px;background:#0c0f13;border-radius:4px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width .6s}
+  .feed{max-height:200px;overflow:auto;font-size:12px}
+  .feed div{padding:3px 0;border-bottom:1px dashed var(--line)}
+  .chip{display:inline-block;background:#0c0f13;border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;margin-left:6px}
+  .status.solved{color:var(--good)} .status.unresolved,.status.budget_exhausted{color:var(--warn)}
+  #verdict{position:absolute;inset:0;display:none;place-items:center;background:rgba(10,13,17,.82);z-index:10}
+  #verdict .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:22px 26px;max-width:520px;text-align:center}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>LLM Detective - Board view</h1>
+  <select id="case" aria-label="Case"></select>
+  <select id="mode" aria-label="Investigator">
+    <option value="llm" selected>LLM agent</option>
+    <option value="rule_based">Rule-based comparison</option>
+  </select>
+  <button id="start" class="primary">Start</button>
+  <button id="step" disabled>Step ▶</button>
+  <button id="run" disabled>Auto ⏩</button>
+  <button id="reset" disabled>Reset</button>
+  <span id="stat" class="chip">—</span>
+  <span id="budget" class="chip">budget —</span>
+  <span style="flex:1"></span>
+  <a href="/">← Main view · human interviews</a>
+</header>
+
+<div class="wrap">
+  <div class="stage" id="stage">
+    <div id="verdict"><div class="card" id="verdictCard"></div></div>
+  </div>
+  <div>
+    <div class="panel"><h2>Hypotheses</h2><div id="hyps" class="muted">—</div></div>
+    <div class="panel"><h2>Evidence</h2><div id="feed" class="feed muted">—</div></div>
+    <div class="panel"><h2>Agent trace</h2><div id="agentTrace" class="feed muted">—</div></div>
+    <div class="panel"><h2>Open questions</h2><div id="oq" class="feed muted">—</div></div>
+  </div>
+</div>
+
+<script>
+const $ = s=>document.querySelector(s);
+let sid=null, view=null, running=false, busy=false, runGeneration=0, positions={}, cleared=new Set();
+const FACES=['🧑‍🦰','🧔','👩','🧑‍🦱','👨‍🦳'];
+
+async function api(p,o){const r=await fetch(p,Object.assign({headers:{'Content-Type':'application/json'}},o||{}));
+  const b=await r.json().catch(()=>({})); if(!r.ok) throw new Error(b.detail||('HTTP '+r.status)); return b;}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+async function loadCases(){
+  const {cases}=await api('/api/cases');
+  cases.sort((a,b)=>(b.inference==='model')-(a.inference==='model'));
+  // Human interviews need the main view's answer panel; do not offer a dead end here.
+  $('#case').innerHTML=cases.filter(c=>!c.human_played).map(c=>`<option value="${c.case_id}">${esc(c.title)}</option>`).join('');
+}
+
+function layoutScene(){
+  const st=view.state, stage=$('#stage');
+  stage.querySelectorAll('.room,.char,.obj,#agent,#bubble').forEach(e=>e.remove());
+  positions={};
+  const idx=st.index||{};
+  const locs=idx.locations||[]; const chars=idx.characters||[]; const objs=idx.objects||[];
+  const W=stage.clientWidth, H=stage.clientHeight;
+
+  // rooms
+  locs.forEach((l,i)=>{
+    const r=document.createElement('div'); r.className='room'+(l.id===idx.location?' hot':'');
+    const w=i===0?W*0.52:W*0.3, x=i===0?24:W-w-24, y=24, h=H*0.52;
+    Object.assign(r.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px'});
+    r.textContent=(l.id===idx.location?'📍 ':'')+l.name;
+    stage.appendChild(r);
+    positions['loc:'+l.id]={x:x+w/2-40,y:y+h/2-20};
+  });
+  // objects inside the main room
+  objs.forEach((o,i)=>{
+    const base=positions['loc:'+idx.location]||{x:W/3,y:H/4};
+    const d=document.createElement('div'); d.className='obj';
+    const x=base.x-70+i*110, y=base.y+40;
+    Object.assign(d.style,{left:x+'px',top:y+'px'});
+    d.innerHTML=`🧰<small>${o.replace(/_/g,' ')}</small>`;
+    stage.appendChild(d);
+    positions['obj:'+o]={x,y:y-30};
+  });
+  // characters along the bottom
+  chars.forEach((c,i)=>{
+    const d=document.createElement('div'); d.className='char'; d.id='char_'+c.id;
+    const x=40+i*(Math.min(140,(W-120)/Math.max(chars.length,1))), y=H-104;
+    Object.assign(d.style,{left:x+'px',top:y+'px'});
+    d.innerHTML=`<div class="face">${FACES[i%FACES.length]}</div><small>${c.name}<br>${c.role}</small>`;
+    stage.appendChild(d);
+    positions['char:'+c.id]={x,y:y-46};
+  });
+  // desk (incident report) + agent + bubble
+  positions['desk']={x:W-150,y:H-150};
+  const desk=document.createElement('div'); desk.className='obj';
+  Object.assign(desk.style,{left:positions.desk.x+'px',top:(positions.desk.y+30)+'px'});
+  desk.innerHTML='🗂️<small>incident report</small>';
+  stage.appendChild(desk);
+  const ag=document.createElement('div'); ag.id='agent'; ag.textContent='🕵️';
+  Object.assign(ag.style,{left:(W/2-40)+'px',top:(H-170)+'px'});
+  stage.appendChild(ag);
+  const bub=document.createElement('div'); bub.id='bubble'; bub.style.display='none';
+  stage.appendChild(bub);
+}
+
+function targetFor(a){
+  const t=a.tool, args=a.tool_arguments||{};
+  if(t==='read_incident_report') return positions['desk'];
+  if(t==='interview_character'||t==='verify_alibi') return positions['char:'+args.suspect];
+  if(t==='analyze_object') return positions['obj:'+args.object];
+  if(t==='inspect_location'||t==='check_access_log'||t==='review_camera') return positions['loc:'+args.location];
+  if(t==='compare_testimonies'){
+    const p1=positions['char:'+args.a], p2=positions['char:'+args.b];
+    if(p1&&p2) return {x:(p1.x+p2.x)/2,y:p1.y};
+  }
+  return null;
+}
+
+function showStep(a){
+  if(!a) return;
+  if(!Object.keys(positions).length || (view.state.index&&view.state.index.suspects&&!positions['char:'+view.state.index.suspects[0]])) layoutScene();
+  const ag=$('#agent'), bub=$('#bubble');
+  const tgt=targetFor(a);
+  if(tgt&&ag){ ag.style.left=(tgt.x+8)+'px'; ag.style.top=(tgt.y+8)+'px'; }
+  if(bub){
+    const p=tgt||{x:60,y:60};
+    bub.style.display='block';
+    bub.style.left=Math.max(8,Math.min(p.x-20,$('#stage').clientWidth-360))+'px';
+    bub.style.top=Math.max(8,p.y-96)+'px';
+    bub.innerHTML=`<span class="skill">${esc(a.skill||'')}</span> ${esc(a.decision||'')}`
+      +(a.observation?`<div class="obs">${esc(a.observation).slice(0,220)}</div>`:'');
+  }
+}
+
+function render(latest){
+  const st=view.state;
+  $('#stat').textContent=st.status; $('#stat').className='chip status '+st.status;
+  $('#budget').textContent='budget '+st.remaining_budget;
+  if(latest) showStep(latest);
+
+  const hy=$('#hyps');
+  if(!(st.hypotheses||[]).length){hy.textContent='—';}
+  else{
+    hy.innerHTML=st.hypotheses.slice().sort((a,b)=>b.confidence-a.confidence).map(h=>{
+      const pct=Math.round(h.confidence*100);
+      return `<div class="hyp"><b>${esc(h.suspect)}</b> <span class="muted">${h.confidence.toFixed(2)}</span>
+        <div class="bar"><i style="width:${pct}%"></i></div></div>`;}).join('');
+    // highlight leader / fade contradicted
+    const lead=st.hypotheses.slice().sort((a,b)=>b.confidence-a.confidence)[0];
+    (st.index.suspects||[]).forEach(s=>{
+      const el=$('#char_'+s); if(!el) return;
+      el.classList.toggle('suspect-hot', lead&&lead.suspect===s&&lead.confidence>0.4);
+      el.classList.toggle('cleared', (st.hypotheses.find(h=>h.suspect===s)||{}).confidence<0.12);
+    });
+  }
+  $('#feed').innerHTML=(st.evidence_collected||[]).slice(-14).reverse()
+    .map(e=>`<div>${esc(e.description)}</div>`).join('')||'—';
+  $('#oq').innerHTML=(st.open_questions||[]).map(q=>`<div>❓ ${esc(q.note)}</div>`).join('')||'—';
+  $('#agentTrace').innerHTML=(view.events||[]).map(e=>e.type==='think'
+    ? `<details><summary>Agent reasoning</summary>${esc(e.text)}</details>`
+    : `<div>${esc(e.type==='gate'?e.phase+': '+(e.passed===undefined?'revise':e.passed?'accepted':'not accepted')+' '+(e.issues||[]).join(' ')+(e.advisories?.length?' Review notes: '+e.advisories.join(' '):''):e.name+' '+JSON.stringify(e.input||{})+' '+(e.result?.observation||''))}</div>`).join('')||'—';
+
+  if(st.status!=='investigating' && st.status!=='awaiting_human') finish();
+}
+
+async function finish(){
+  running=false;
+  $('#step').disabled=$('#run').disabled=true; $('#reset').disabled=false;
+  const r=view.state.final_report||{};
+  let html=`<h2 style="margin-top:0">Investigation ended: <span class="status ${view.state.status}">${view.state.status}</span></h2>
+    <p>${esc(r.investigation_summary||'')}</p>
+    ${r.agent_summary?`<p class="muted"><b>Agent's account:</b> ${esc(r.agent_summary)}</p>`:''}
+    <p><b>Accused:</b> ${r.culprit?esc(r.culprit):'<span class="muted">No accepted accusation</span>'}</p>
+    <button id="revealBtn" class="primary">Reveal hidden truth and score</button>
+    <div id="truth" style="margin-top:10px"></div>
+    <div style="margin-top:8px"><button onclick="document.getElementById('verdict').style.display='none'">Close</button></div>`;
+  $('#verdictCard').innerHTML=html; $('#verdict').style.display='grid';
+  $('#revealBtn').onclick=async()=>{
+    const ev=await api(`/api/sessions/${sid}/evaluation`);
+    $('#truth').innerHTML=`<div class="muted" style="text-align:left">
+      Hidden truth: culprit <b>${esc(ev.hidden_truth.culprit)}</b>, method ${esc(ev.hidden_truth.method)},
+      motive ${esc(ev.hidden_truth.motive)}, at ${esc(ev.hidden_truth.time)}.<br>
+      Evaluator score: <b>${ev.evaluation.total_score}</b> · status_match: ${ev.evaluation.status_match}
+      · actions: ${ev.evaluation.actions_used}/${ev.evaluation.budget}</div>`;
+  };
+}
+
+$('#start').onclick=async()=>{
+  if(busy || running) return;
+  busy=true; syncControls(); cleared.clear();
+  $('#verdict').style.display='none';
+  try{
+    view=await api('/api/sessions',{method:'POST',body:JSON.stringify({case_id:$('#case').value,mode:$('#mode').value})});
+    sid=view.session_id;
+    layoutScene(); render();
+  }catch(e){ alert(e.message); }
+  finally{ busy=false; syncControls(); }
+};
+function syncControls(){
+  const canStep=!!sid && view?.state.status==='investigating';
+  $('#start').disabled=busy || running;
+  $('#step').disabled=!canStep || busy || running;
+  $('#reset').disabled=!sid || busy || running;
+  $('#run').disabled=!running && (!canStep || busy);
+  $('#run').textContent=running?'Pause ⏸':'Auto ⏩';
+}
+async function step(){
+  if(busy) return;
+  busy=true; syncControls();
+  try{ view=await api(`/api/sessions/${sid}/step`,{method:'POST'}); render(view.latest); }
+  catch(e){ running=false; alert(e.message); }
+  finally{ busy=false; syncControls(); }
+}
+$('#step').onclick=step;
+$('#run').onclick=async()=>{
+  if(running){ running=false; runGeneration++; syncControls(); return; }
+  if(busy) return;
+  running=true; syncControls();
+  const generation=++runGeneration;
+  // Await each LLM turn. An interval would race requests against the same session.
+  while(running && generation===runGeneration && view.state.status==='investigating'){
+    await step();
+    if(running) await new Promise(resolve=>setTimeout(resolve,800));
+  }
+  if(generation===runGeneration){ running=false; syncControls(); }
+};
+$('#reset').onclick=async()=>{
+  if(busy || running) return;
+  busy=true; syncControls();
+  try{
+    view=await api(`/api/sessions/${sid}/reset`,{method:'POST'});
+    $('#verdict').style.display='none'; cleared.clear(); layoutScene(); render();
+  }catch(e){ alert(e.message); }
+  finally{ busy=false; syncControls(); }
+};
+loadCases();
+</script>
+</body>
+</html>

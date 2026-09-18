@@ -1,0 +1,344 @@
+{
+ "case_id": "case-010",
+ "title": "The Damaged Archive",
+ "difficulty": "standard",
+ "short_description": "Somebody pulled four boxes of 1962 records out of a library archive and destroyed them. The head librarian is played by a real person — she saw most of it, and she is not sure she wants to be the one who says so.",
+ "budget": 11,
+ "design_note": "HUMAN-AS-ACTOR CASE. Sarah is played by a person, not the engine. Every id in required_evidence comes from the key log, the archive camera and the recovered fragments, so a player who withholds cannot make the case unwinnable. Sarah's value is the motive: she is the only one who knows why the 1962 boxes in particular mattered, which can shortcut the agent to the answer long before the fragments are analysed. James is the honest bystander; Priya is the red herring — a returned key and a grievance, but no access.",
+ "incident_report": "Between 16:00 and 19:00 on Friday, four boxes of 1962 material were taken from the Local History store at Fenwick Library and destroyed in the external bins. Staff found torn pages on Saturday morning. The store is locked and only volunteers with a current key can enter. Three volunteers are on the register: Carmen (two years, cataloguer), James (one month), and Priya (administrator, stood down last month). Sarah, the head librarian, was on duty that evening and can be questioned in person. The damage was deliberate.",
+ "index": {
+  "suspects": [
+   "carmen",
+   "james",
+   "priya"
+  ],
+  "location": "archive_room",
+  "time_window": {
+   "from": "16:00",
+   "to": "19:00"
+  },
+  "objects": [
+   "damaged_records",
+   "volunteer_registry"
+  ],
+  "characters": [
+   {
+    "id": "carmen",
+    "name": "Carmen",
+    "role": "archive volunteer"
+   },
+   {
+    "id": "james",
+    "name": "James",
+    "role": "junior volunteer"
+   },
+   {
+    "id": "priya",
+    "name": "Priya",
+    "role": "volunteer administrator"
+   },
+   {
+    "id": "sarah",
+    "name": "Sarah",
+    "role": "head librarian",
+    "human_played": true,
+    "knowledge": {
+     "carmen_arrived_first": "Carmen let herself into the store just before four, well before anyone else. I saw her go in. I did not see her come out.",
+     "the_bins_at_six": "Around six I heard the external bins going — not a bag being dropped in, but something being pushed down and torn. I was in the office and I did not go and look, and I have thought about that since.",
+     "how_she_looked": "When Carmen came out, close to a quarter to seven, she was flustered and her hands were filthy. She went and washed them before James was done for the evening.",
+     "james_came_late": "James turned up around twenty past six and seemed surprised to find her already in there. He went in to help and was gone again inside half an hour."
+    },
+    "secrets": {
+     "the_name_in_the_boxes": "There is a name in the 1962 housing material — Margaret Chen. That is Carmen's grandmother. I mentioned it to Carmen once, years ago, thinking she would be pleased to find family in the collection. She was not pleased.",
+     "you_feel_responsible": "You are the reason she knew those papers existed. If she did this, you handed her the reason. You have not said that out loud to anyone.",
+     "you_are_not_certain": "You think it was her. You are not certain. And you keep asking yourself what happens to a decent volunteer's life if you say it and you are wrong."
+    },
+    "motivation": "You want the collection protected and you want to tell the truth, but naming Carmen feels like a betrayal of someone you liked and trusted. Left to yourself you will lay out the timings neutrally and let the detective draw their own conclusions. Asked directly about the boxes, the family name, or why those particular records mattered, you will hesitate — and then answer honestly, because you are not willing to lie to a detective about it."
+   }
+  ],
+  "locations": [
+   {
+    "id": "archive_room",
+    "name": "Archive Room"
+   },
+   {
+    "id": "staff_area",
+    "name": "Staff Area"
+   }
+  ]
+ },
+ "hidden_truth": {
+  "culprit": "carmen",
+  "action": "destroyed_records",
+  "method": "discarded_in_bins",
+  "location": "archive_room",
+  "time": "18:00",
+  "motive": "hide_family_history"
+ },
+ "required_evidence": [
+  "log_carmen_key",
+  "cam_carmen_boxes",
+  "obj_fragments_name"
+ ],
+ "evaluation": {
+  "expected_status": "solved",
+  "solvable": true
+ },
+ "tools": {
+  "read_incident_report": {
+   "observation": "Four boxes of 1962 Local History material were taken from the locked store at Fenwick Library between 16:00 and 19:00 on Friday and deliberately destroyed in the external bins. Current keys are held by Carmen (cataloguer, two years) and James (one month); Priya's was returned last month. Sarah, the head librarian, was on duty and can be questioned in person.",
+   "evidence": []
+  },
+  "check_access_log": {
+   "archive_room": {
+    "observation": "The store door records every key. Carmen's key opened it at 15:55 and the door was not locked again until 18:47. James's key registered at 18:22. Priya's key does not appear at all — it was surrendered to the office last month and is still in the safe.",
+    "evidence": [
+     {
+      "id": "log_carmen_key",
+      "supports": "carmen",
+      "weight": 0.13,
+      "relates_to_incident": true,
+      "independent_type": "access",
+      "reveals": {
+       "time": "18:00"
+      },
+      "description": "Carmen's key opened the store at 15:55 and it stayed unlocked until 18:47 — she was inside across the whole window."
+     },
+     {
+      "id": "log_james_late",
+      "supports": "james",
+      "weight": -0.1,
+      "relates_to_incident": true,
+      "independent_type": "access",
+      "reveals": {},
+      "description": "James's key registered at 18:22, after the bins were already being filled."
+     },
+     {
+      "id": "log_priya_no_key",
+      "supports": "priya",
+      "weight": -0.12,
+      "relates_to_incident": true,
+      "independent_type": "access",
+      "reveals": {},
+      "description": "Priya's key was surrendered last month, is in the office safe, and never registered on the store door."
+     }
+    ]
+   },
+   "staff_area": {
+    "observation": "The staff area is not on the key system. The duty book has Sarah signed in for the evening, Carmen at 15:50 and James at 18:18. Priya is not on the rota at all.",
+    "evidence": []
+   }
+  },
+  "review_camera": {
+   "archive_room": {
+    "observation": "The store camera shows Carmen working the shelves from just before four. At 17:30 she starts pulling boxes specifically from the 1962 run. From 17:55 she carries them out of frame towards the external door, in two trips. James appears at 18:22; she comes back into frame at 18:26, flustered, hands dirty, and leaves at 18:45.",
+    "evidence": [
+     {
+      "id": "cam_carmen_boxes",
+      "supports": "carmen",
+      "weight": 0.15,
+      "relates_to_incident": true,
+      "independent_type": "camera",
+      "reveals": {
+       "action": "destroyed_records",
+       "method": "discarded_in_bins"
+      },
+      "description": "Camera shows Carmen selecting boxes from the 1962 run at 17:30 and carrying them out towards the external door from 17:55."
+     }
+    ]
+   },
+   "staff_area": {
+    "observation": "The corridor camera has been out of service since the spring; the fault is logged with the council. Nothing recorded.",
+    "evidence": []
+   }
+  },
+  "inspect_location": {
+   "archive_room": {
+    "observation": "The 1962 run has four gaps in it: LH-1962-A through LH-1962-D. The shelf labels are handwritten and initialled by whoever catalogued them — all four are in Carmen's hand. Nothing else on the shelf has been disturbed.",
+    "evidence": [
+     {
+      "id": "loc_targeted_gap",
+      "supports": "carmen",
+      "weight": 0.09,
+      "relates_to_incident": true,
+      "independent_type": "scene",
+      "reveals": {},
+      "description": "Exactly the four boxes Carmen herself catalogued are missing, and nothing around them was touched — whoever took them knew which ones they wanted."
+     }
+    ]
+   },
+   "staff_area": {
+    "observation": "The external bin by the staff door has been emptied for collection, but torn paper is caught under the lip and in the bottom seam. Beside the bin, a grievance letter from Priya about her standing-down is pinned to the noticeboard, dated three weeks ago.",
+    "evidence": [
+     {
+      "id": "loc_priya_grievance",
+      "supports": "priya",
+      "weight": 0.03,
+      "relates_to_incident": false,
+      "independent_type": "scene",
+      "reveals": {},
+      "description": "Priya's grievance letter about being stood down is pinned by the bins, but it predates the incident by three weeks and concerns her hours, not the collection."
+     }
+    ]
+   }
+  },
+  "analyze_object": {
+   "damaged_records": {
+    "observation": "The recovered fragments come from LH-1962-A and LH-1962-B. They have been torn across, soaked and mixed — not weather, not mishandling. Enough of an index page survives to read the subject: a 1962 housing allocation inquiry. One name recurs on it, Margaret Chen, listed among the officials involved.",
+    "evidence": [
+     {
+      "id": "obj_fragments_name",
+      "supports": "carmen",
+      "weight": 0.13,
+      "relates_to_incident": true,
+      "independent_type": "object",
+      "reveals": {
+       "motive": "hide_family_history"
+      },
+      "description": "The destroyed pages concern a 1962 housing inquiry and name Margaret Chen — Carmen's grandmother — among the officials involved."
+     },
+     {
+      "id": "obj_damage_deliberate",
+      "supports": "carmen",
+      "weight": 0.05,
+      "relates_to_incident": true,
+      "independent_type": "object",
+      "reveals": {},
+      "description": "The fragments were torn, soaked and mixed together; the damage cannot be accidental."
+     }
+    ]
+   },
+   "volunteer_registry": {
+    "observation": "Carmen has two years on the register and around eighty visits. Her cataloguing has been concentrated on the 1960s run for the last three months, and her sign-ins cluster on evenings when she is the only volunteer rostered. James has four visits, all supervised. Priya's record closes last month with her key returned.",
+    "evidence": [
+     {
+      "id": "obj_registry_pattern",
+      "supports": "carmen",
+      "weight": 0.06,
+      "relates_to_incident": true,
+      "independent_type": "object",
+      "reveals": {},
+      "description": "Carmen's recent sign-ins cluster on evenings when she would be alone in the store, and her work has been concentrated on the 1960s run."
+     }
+    ]
+   }
+  },
+  "interview_character": {
+   "carmen": {
+    "observation": "Carmen says she spent Friday evening on routine cataloguing and noticed nothing wrong. Pressed on the 1962 boxes she becomes short and defensive, and insists she would never damage the collection because she loves it.",
+    "evidence": [
+     {
+      "id": "int_carmen",
+      "supports": "carmen",
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {},
+      "raises_question": {
+       "suspect": "carmen",
+       "note": "Carmen says she was doing routine cataloguing. The camera has her selecting the 1962 run and carrying boxes out. Verify."
+      },
+      "description": "Carmen claims routine cataloguing and denies any knowledge of the damage."
+     }
+    ]
+   },
+   "james": {
+    "observation": "James says he came in around twenty past six to help and found Carmen already there. She seemed stressed and told him she could manage alone, so he left after about half an hour.",
+    "evidence": [
+     {
+      "id": "int_james",
+      "supports": "james",
+      "weight": 0.0,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {},
+      "description": "James places Carmen in the store before him and describes her as stressed, but saw no damage himself."
+     }
+    ]
+   },
+   "priya": {
+    "observation": "Priya says she has not been in the building since she was stood down and is frank that she resents how it was handled. She points out, correctly, that she gave her key back.",
+    "evidence": [
+     {
+      "id": "int_priya",
+      "supports": "priya",
+      "weight": 0.0,
+      "relates_to_incident": false,
+      "independent_type": "statement",
+      "reveals": {},
+      "description": "Priya says she has not been on site since being stood down; her grievance is with the committee, not the archive."
+     }
+    ]
+   }
+  },
+  "verify_alibi": {
+   "carmen": {
+    "observation": "Carmen's account of routine cataloguing does not survive the camera: it shows her pulling the 1962 run at 17:30 and carrying boxes towards the external door from 17:55, with the store unlocked under her key throughout.",
+    "evidence": [
+     {
+      "id": "ver_carmen",
+      "supports": "carmen",
+      "weight": 0.1,
+      "relates_to_incident": true,
+      "independent_type": "camera",
+      "reveals": {},
+      "resolves_question": "carmen",
+      "description": "Carmen's routine-cataloguing account is contradicted by camera footage of her removing the 1962 boxes."
+     }
+    ]
+   },
+   "james": {
+    "observation": "James's account holds: his key registers at 18:22, after the bins had already been heard, and the camera has him in frame only from then.",
+    "evidence": [
+     {
+      "id": "ver_james",
+      "supports": "james",
+      "weight": -0.1,
+      "relates_to_incident": true,
+      "independent_type": "access",
+      "reveals": {},
+      "description": "James's key and the camera both place him in the store only from 18:22, after the removal had begun."
+     }
+    ]
+   },
+   "priya": {
+    "observation": "Priya's account holds: her key is in the office safe, she is on no rota for Friday, and the store door has no record of her.",
+    "evidence": [
+     {
+      "id": "ver_priya",
+      "supports": "priya",
+      "weight": -0.12,
+      "relates_to_incident": true,
+      "independent_type": "access",
+      "reveals": {},
+      "description": "Priya had no key, no rota and no door record for the evening."
+     }
+    ]
+   }
+  },
+  "compare_testimonies": {
+   "carmen|james": {
+    "observation": "The accounts pull apart on one point: Carmen describes an uneventful evening of cataloguing, while James found her already there, stressed, and was told she could manage without him.",
+    "evidence": [
+     {
+      "id": "cmp_carmen_james",
+      "supports": "carmen",
+      "weight": 0.06,
+      "relates_to_incident": true,
+      "independent_type": "statement",
+      "reveals": {},
+      "description": "James's description of Carmen as stressed and wanting to be left alone sits badly against her account of an uneventful evening."
+     }
+    ]
+   },
+   "carmen|priya": {
+    "observation": "Priya was not on site and can say nothing about the evening; the two accounts do not meet.",
+    "evidence": []
+   },
+   "james|priya": {
+    "observation": "Neither adds anything about the other; Priya was absent and James arrived late.",
+    "evidence": []
+   }
+  }
+ }
+}

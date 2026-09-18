@@ -1,0 +1,451 @@
+{
+  "case_id": "case-005",
+  "title": "The Observatory Blind Spot",
+  "difficulty": "hard adversarial",
+  "short_description": "A telescope calibration was sabotaged during a narrow science window. The obvious physical trail points to the wrong person, two tool results share one underlying source, and the agent has just enough budget to clear the planted lead.",
+  "budget": 9,
+  "incident_report": "Between 23:30 and 23:50, the control room of the north observatory was used to overwrite the telescope calibration profile. The failed profile ruined a once-a-year transit capture. No door was forced. Staff with partial access: Arun (night technician), Bianca (operations lead), Celia (data scientist), Dmitri (optics contractor), and Elena (principal investigator). Arun was seen near the loading dock shortly after the incident, and Bianca filed an oddly timed alarm complaint.",
+  "index": {
+    "suspects": [
+      "arun",
+      "bianca",
+      "celia",
+      "dmitri",
+      "elena"
+    ],
+    "location": "observatory_control_room",
+    "time_window": {
+      "from": "23:30",
+      "to": "23:50"
+    },
+    "objects": [
+      "calibration_laptop",
+      "lens_crate",
+      "service_key"
+    ],
+    "characters": [
+      {
+        "id": "arun",
+        "name": "Arun",
+        "role": "night technician"
+      },
+      {
+        "id": "bianca",
+        "name": "Bianca",
+        "role": "operations lead"
+      },
+      {
+        "id": "celia",
+        "name": "Celia",
+        "role": "data scientist"
+      },
+      {
+        "id": "dmitri",
+        "name": "Dmitri",
+        "role": "optics contractor"
+      },
+      {
+        "id": "elena",
+        "name": "Elena",
+        "role": "principal investigator"
+      }
+    ],
+    "locations": [
+      {
+        "id": "observatory_control_room",
+        "name": "Observatory Control Room"
+      },
+      {
+        "id": "loading_dock",
+        "name": "Loading Dock"
+      }
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "celia",
+    "action": "overwrote_calibration_profile",
+    "method": "spoofed_calibration_script",
+    "location": "observatory_control_room",
+    "time": "23:42",
+    "motive": "hide_data_fabrication"
+  },
+  "required_evidence": [
+    "al_celia_badge",
+    "loc_fabrication_motive",
+    "obj_laptop_script",
+    "alibi_arun_cleared"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "The telescope calibration profile was overwritten in the observatory control room between 23:30 and 23:50. Arun was seen near the loading dock after the incident, and Bianca filed an oddly timed alarm complaint.",
+      "evidence": [
+        {
+          "id": "rep_arun_loading_dock",
+          "supports": "arun",
+          "weight": 0.0,
+          "relates_to_incident": false,
+          "independent_type": "statement",
+          "reveals": {},
+          "description": "Arun was seen near the loading dock shortly after the failed capture.",
+          "raises_question": {
+            "suspect": "arun",
+            "note": "Arun was seen near the loading dock after the sabotage; verify whether that trip explains the planted trail."
+          }
+        },
+        {
+          "id": "rep_bianca_alarm",
+          "supports": "bianca",
+          "weight": 0.0,
+          "relates_to_incident": false,
+          "independent_type": "statement",
+          "reveals": {},
+          "description": "Bianca filed an unusually timed alarm complaint before the failed capture.",
+          "raises_question": {
+            "suspect": "bianca",
+            "note": "Bianca's alarm complaint is oddly timed and should be checked before closing the case."
+          }
+        }
+      ]
+    },
+    "check_access_log": {
+      "observatory_control_room": {
+        "observation": "Door telemetry shows Celia's badge opening the control room at 23:42. The service-key ledger also claims Arun's maintenance key was checked out for the same minute, but that ledger is fed by the same badge controller.",
+        "evidence": [
+          {
+            "id": "al_celia_badge",
+            "supports": "celia",
+            "weight": 0.22,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "source_group": "badge_controller",
+            "reveals": {
+              "time": "23:42"
+            },
+            "description": "Celia's badge opened the observatory control room at 23:42, inside the sabotage window."
+          },
+          {
+            "id": "al_arun_service_key",
+            "supports": "arun",
+            "weight": 0.18,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "source_group": "badge_controller",
+            "reveals": {},
+            "description": "The service-key ledger says Arun's maintenance key was checked out at 23:42, but the entry comes from the same badge controller."
+          },
+          {
+            "id": "al_elena_absent",
+            "supports": "elena",
+            "weight": -0.12,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {},
+            "description": "Elena's badge never entered the observatory wing during the incident window."
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "observatory_control_room": {
+        "observation": "The corridor camera is partly washed out by dome glare. It shows a hooded person wearing Arun's red jacket at 23:43. A reflection in the glass briefly shows Celia's badge lanyard, but that reflection depends on the same timestamped badge overlay.",
+        "evidence": [
+          {
+            "id": "cam_arun_jacket",
+            "supports": "arun",
+            "weight": 0.26,
+            "relates_to_incident": true,
+            "independent_type": "camera",
+            "reveals": {},
+            "description": "Camera footage shows a hooded person wearing Arun's red jacket near the control room at 23:43."
+          },
+          {
+            "id": "cam_celia_lanyard",
+            "supports": "celia",
+            "weight": 0.18,
+            "relates_to_incident": true,
+            "independent_type": "camera",
+            "source_group": "badge_controller",
+            "reveals": {},
+            "description": "A glass reflection briefly shows Celia's badge lanyard near the control room at 23:43."
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "observatory_control_room": {
+        "observation": "The console was wiped clean, but the waste drawer held a torn checksum sheet for Celia's private data-cleaning branch. A handwritten filter note matches a disputed anomaly in Celia's published draft. Dmitri's cloth tag was also present, dated from his scheduled optics work the previous morning.",
+        "evidence": [
+          {
+            "id": "loc_fabrication_motive",
+            "supports": "celia",
+            "weight": 0.12,
+            "relates_to_incident": true,
+            "independent_type": "scene",
+            "reveals": {
+              "action": "overwrote_calibration_profile",
+              "motive": "hide_data_fabrication"
+            },
+            "description": "The scene links the sabotage to Celia's private data-cleaning branch and a disputed anomaly she needed to hide."
+          },
+          {
+            "id": "loc_dmitri_cloth",
+            "supports": "dmitri",
+            "weight": 0.05,
+            "relates_to_incident": false,
+            "independent_type": "scene",
+            "reveals": {},
+            "description": "Dmitri's cloth tag was in the room, but it is dated from scheduled optics work the previous morning."
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "calibration_laptop": {
+        "observation": "The laptop's deleted shell history contains Celia's private calibration script. It overwrote the profile at 23:42 and used a spoofed service-key token rather than Arun's real key.",
+        "evidence": [
+          {
+            "id": "obj_laptop_script",
+            "supports": "celia",
+            "weight": 0.16,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "source_group": "script_artifact",
+            "reveals": {
+              "method": "spoofed_calibration_script",
+              "action": "overwrote_calibration_profile"
+            },
+            "description": "Celia's private script overwrote the calibration profile at 23:42 using a spoofed service-key token."
+          }
+        ]
+      },
+      "lens_crate": {
+        "observation": "The lens crate has Arun's fingerprints, but all are under a sealed dust layer from his scheduled inventory round. The crate was moved only after the failed capture, not during the overwrite.",
+        "evidence": [
+          {
+            "id": "obj_lens_crate_old_prints",
+            "supports": "arun",
+            "weight": -0.15,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Arun's fingerprints on the lens crate predate the incident and do not support the sabotage trail."
+          }
+        ]
+      },
+      "service_key": {
+        "observation": "The maintenance service key was never physically removed. Its rotating token was copied from a crash report exported by Celia's laptop earlier that evening.",
+        "evidence": [
+          {
+            "id": "obj_service_key_clone",
+            "supports": "celia",
+            "weight": 0.12,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "source_group": "key_clone",
+            "reveals": {},
+            "description": "Celia copied the maintenance token from a crash report instead of using Arun's physical service key."
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "arun": {
+        "observation": "Arun says he went to the loading dock because Bianca asked him to sign for a late parts delivery. He says his red jacket was missing from the technician rack until after midnight.",
+        "evidence": [
+          {
+            "id": "int_arun_jacket",
+            "supports": "arun",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Arun says his loading-dock trip was requested and his red jacket was missing."
+          }
+        ]
+      },
+      "bianca": {
+        "observation": "Bianca says the alarm complaint was routine and denies sending Arun to the dock, but her timeline is vague.",
+        "evidence": [
+          {
+            "id": "int_bianca_vague",
+            "supports": "bianca",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Bianca gives a vague account of the alarm complaint."
+          }
+        ]
+      },
+      "celia": {
+        "observation": "Celia says she was in the data lab rerunning a harmless calibration report and never entered the control room.",
+        "evidence": [
+          {
+            "id": "int_celia_denial",
+            "supports": "celia",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Celia denies entering the control room and calls the script harmless.",
+            "raises_question": {
+              "suspect": "celia",
+              "note": "Celia denies entering the control room despite the badge and script trail."
+            }
+          }
+        ]
+      },
+      "dmitri": {
+        "observation": "Dmitri says he finished optics work the previous morning and did not return at night.",
+        "evidence": [
+          {
+            "id": "int_dmitri_prior_work",
+            "supports": "dmitri",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Dmitri's access was for earlier scheduled optics work."
+          }
+        ]
+      },
+      "elena": {
+        "observation": "Elena says she was off-site writing the grant response and watched the ruined capture remotely.",
+        "evidence": [
+          {
+            "id": "int_elena_remote",
+            "supports": "elena",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Elena says she only observed the failed capture remotely."
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "arun": {
+        "observation": "Dock receipts and a guard radio transcript confirm Bianca sent Arun to the dock from 23:38 to 23:49. The red jacket was checked back into the rack after the failed capture.",
+        "evidence": [
+          {
+            "id": "alibi_arun_cleared",
+            "supports": "arun",
+            "weight": -0.25,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Arun was at the loading dock during the overwrite, and the jacket trail was planted.",
+            "resolves_question": "arun"
+          }
+        ]
+      },
+      "bianca": {
+        "observation": "Bianca's alarm complaint was badly timed but legitimate: the dome humidity alarm fired at 23:27 and two vendors saw her on the phone until 23:52.",
+        "evidence": [
+          {
+            "id": "alibi_bianca_alarm",
+            "supports": "bianca",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Bianca's alarm complaint was real but unrelated to the sabotage.",
+            "resolves_question": "bianca"
+          }
+        ]
+      },
+      "celia": {
+        "observation": "Celia's data-lab alibi fails: the lab workstation was idle, and her laptop exported the crash report that supplied the copied maintenance token.",
+        "evidence": [
+          {
+            "id": "alibi_celia_broken",
+            "supports": "celia",
+            "weight": 0.12,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Celia's data-lab alibi is contradicted by the idle workstation and token-export trail.",
+            "resolves_question": "celia"
+          }
+        ]
+      },
+      "dmitri": {
+        "observation": "Dmitri's site record confirms his work ended at 10:15 that morning.",
+        "evidence": [
+          {
+            "id": "alibi_dmitri_prior_work",
+            "supports": "dmitri",
+            "weight": -0.08,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Dmitri was not on site during the incident window."
+          }
+        ]
+      },
+      "elena": {
+        "observation": "Remote VPN logs and conference audio place Elena off-site during the overwrite.",
+        "evidence": [
+          {
+            "id": "alibi_elena_remote",
+            "supports": "elena",
+            "weight": -0.08,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Elena was off-site and connected remotely during the overwrite."
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "arun|bianca": {
+        "observation": "Arun's dock trip is confirmed by independent records. Bianca was mistaken about not sending him, but the mistake does not connect her to the overwrite.",
+        "evidence": [
+          {
+            "id": "cmp_arun_bianca",
+            "supports": "arun",
+            "weight": -0.05,
+            "relates_to_incident": true,
+            "independent_type": "testimony",
+            "reveals": {},
+            "description": "The Arun-Bianca contradiction clears Arun's timing rather than implicating him."
+          }
+        ]
+      },
+      "arun|celia": {
+        "observation": "Arun's account explains the jacket and dock sighting; Celia's denial conflicts with the script trail.",
+        "evidence": [
+          {
+            "id": "cmp_arun_celia",
+            "supports": "celia",
+            "weight": 0.05,
+            "relates_to_incident": true,
+            "independent_type": "testimony",
+            "reveals": {},
+            "description": "Comparing Arun and Celia leaves Celia's denial as the unsupported account."
+          }
+        ]
+      },
+      "celia|dmitri": {
+        "observation": "Dmitri's prior-work explanation matches the dated cloth tag; Celia's script explanation does not match the laptop history.",
+        "evidence": [
+          {
+            "id": "cmp_celia_dmitri",
+            "supports": "celia",
+            "weight": 0.04,
+            "relates_to_incident": true,
+            "independent_type": "testimony",
+            "reveals": {},
+            "description": "Dmitri's trace is stale, while Celia's trace belongs to the incident window."
+          }
+        ]
+      }
+    }
+  }
+}

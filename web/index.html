@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LLM Detective</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#2a333f;
+    --ink:#e6edf3; --dim:#9aa7b4; --accent:#4aa8ff; --good:#3fb950;
+    --warn:#d29922; --bad:#f85149; --chip:#243040;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  header .sub{color:var(--dim);font-size:12px}
+  .wrap{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 51px)}
+  .left{border-right:1px solid var(--line);padding:16px;overflow:auto}
+  .right{padding:16px;overflow:auto}
+  .setup-title{font-size:20px;margin:0 0 4px}
+  .setup-step{display:block;margin:18px 0 8px;font-weight:600}
+  #caseSelect,#mode{width:100%}
+  #casePreview{margin-top:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  #casePreview p{margin:6px 0;color:var(--dim);font-size:13px}
+  #start{width:100%;padding:12px}
+  #runHelp{font-size:12px;margin:8px 0}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:0 0 8px}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--dim);margin-top:6px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  button{background:var(--accent);color:#04121f;border:0;border-radius:6px;padding:8px 12px;font-weight:600;cursor:pointer}
+  button.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:0}
+  .kv .k{color:var(--dim)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .hyp{margin:8px 0}
+  .hyp .top{display:flex;justify-content:space-between;font-size:13px}
+  .bar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:3px}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,#2d6cdf,#4aa8ff)}
+  ul{margin:6px 0;padding-left:18px}
+  li{margin:3px 0}
+  .trace .row{border-left:2px solid var(--line);padding:8px 12px;margin:0 0 10px;background:var(--panel2);border-radius:0 8px 8px 0}
+  .trace .row.stop{border-left-color:var(--warn)}
+  .trace .hd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .trace .it{font-weight:700;color:var(--accent)}
+  .chip{font-size:11px;background:var(--chip);color:var(--ink);border-radius:20px;padding:1px 8px}
+  .muted{color:var(--dim)}
+  .changes{font-size:12px;color:var(--dim);margin-top:5px}
+  .changes div{margin:2px 0}
+  .status{font-weight:700}
+  .status.solved{color:var(--good)} .status.unresolved{color:var(--warn)}
+  .status.budget_exhausted{color:var(--warn)} .status.investigating{color:var(--accent)}
+  .truth td{padding:4px 8px;border-bottom:1px solid var(--line)}
+  .truth .ok{color:var(--good)} .truth .no{color:var(--bad)}
+  .hidden{display:none}
+  /* Keep the advanced builder outside the main setup flow. */
+  details.fold{margin-top:16px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+  details.fold>summary{list-style:none;cursor:pointer;padding:9px 12px;font-size:12px;
+    text-transform:uppercase;letter-spacing:.08em;color:var(--dim);display:flex;
+    align-items:center;gap:8px;user-select:none}
+  details.fold>summary::-webkit-details-marker{display:none}
+  details.fold>summary:hover{color:var(--ink)}
+  details.fold>summary::before{content:"▸";font-size:11px;transition:transform .15s}
+  details.fold[open]>summary::before{transform:rotate(90deg)}
+  details.fold[open]>summary{border-bottom:1px solid var(--line)}
+  details.fold .foldbody{padding:12px}
+  details.fold .hint{color:var(--dim);font-size:11px;text-transform:none;letter-spacing:0;margin-left:auto}
+  .empty{color:var(--dim);font-style:italic}
+  a.link{color:var(--accent);cursor:pointer}
+  @media(max-width:800px){.wrap,.grid{grid-template-columns:minmax(0,1fr)}.left{border-right:0;border-bottom:1px solid var(--line)}header{flex-wrap:wrap}.right{min-width:0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>LLM Detective</h1>
+  <span class="sub">an agentic deduction loop: observe, decide, act, update, evaluate</span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: case selection + controls -->
+  <div class="left">
+    <h2 class="setup-title" style="text-transform:none;letter-spacing:0;color:var(--ink)">Start an investigation</h2>
+    <p class="muted" style="margin:0">Choose a mystery and watch the agent investigate. No detective experience needed.</p>
+    <label class="setup-step" for="caseSelect">1. Choose a case</label>
+    <select id="caseSelect" aria-describedby="casePreview"><option>Loading cases…</option></select>
+    <div id="casePreview" aria-live="polite"></div>
+    <label class="setup-step" for="mode">2. Choose the investigator</label>
+    <select id="mode">
+      <option value="llm">LLM-driven agent — recommended</option>
+      <option value="rule_based">Deterministic baseline — comparison only</option>
+    </select>
+    <div id="modeNote" class="muted" style="font-size:12px;margin-top:6px"></div>
+    <div id="keyNotice" role="status" style="color:var(--warn)"></div>
+    <div id="llmOpts" style="display:none"><select id="policy"><option value="demo">Demo</option><option value="evaluation">Evaluation</option></select></div>
+    <div class="setup-step">3. Start and follow the evidence</div>
+    <button id="start" disabled>Start investigation</button>
+    <div id="runHelp" class="muted" role="status">The agent chooses its tools. Pause to inspect a turn, or continue automatically.</div>
+    <div class="controls">
+      <button id="step" class="ghost" disabled>Next turn</button>
+      <button id="run" class="ghost" disabled>Continue automatically</button>
+      <button id="stop" class="ghost" style="display:none">Pause</button>
+      <button id="reset" class="ghost" disabled>Restart case</button>
+    </div>
+    <div id="err" role="alert" style="color:var(--bad)"></div>
+    <a class="link" href="/board">Open board view ↗</a>
+
+    <details class="fold" id="builderFold">
+    <summary>Custom case builder <span class="hint">advanced · authored</span></summary>
+    <div class="foldbody">
+    <div id="builder" style="font-size:13px">
+      <textarea id="b_desc" aria-label="Scenario description" rows="2" style="width:100%" placeholder="Describe a scenario (optional — requires an API key)…"></textarea>
+      <button id="b_ai" class="ghost" style="margin:4px 0">Generate a recipe with AI</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+        <select id="b_type" aria-label="Incident type"></select>
+        <select id="b_loc" aria-label="Location"></select>
+        <select id="b_twist" aria-label="Plot twist"></select>
+        <input id="b_budget" type="number" min="6" max="14" value="11" title="budget">
+      </div>
+      <div id="b_roster" style="margin:6px 0;display:flex;flex-wrap:wrap;gap:6px"></div>
+      <input id="b_extra" aria-label="Additional suspects" style="width:100%" placeholder="Additional names, comma-separated (optional)">
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+        <select id="b_culprit" aria-label="Culprit" style="flex:1"><option value="random">Culprit: random</option></select>
+        <label style="white-space:nowrap"><input id="b_herring" type="checkbox" checked> red herring</label>
+      </div>
+      <button id="b_create" style="margin-top:6px">Create case</button>
+      <div id="b_msg" class="muted" style="font-size:12px"></div>
+    </div>
+    </div>
+    </details>
+
+    <div class="panel" id="briefingPanel" style="display:none">
+      <h2>Incident report</h2>
+      <div id="briefing" class="mono"></div>
+    </div>
+
+    <!-- Shown only while the run is parked on a question for a human-played
+         character. This is the ONLY route by which an answer enters a run. -->
+    <div class="panel" id="interviewPanel" style="display:none;border-color:var(--warn)">
+      <h2 style="color:var(--warn)">🎭 You are being questioned</h2>
+      <div id="roleCard" class="mono"
+           style="white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line);
+                  border-radius:6px;padding:10px;font-size:12px;max-height:230px;overflow:auto"></div>
+      <div style="margin-top:12px">
+        <div class="muted" style="font-size:12px">The detective asks <b id="askName"></b>:</div>
+        <div id="askQuestion" style="font-size:15px;font-weight:600;margin:6px 0 10px"></div>
+        <textarea id="answerBox" rows="3" placeholder="Answer in character — the truth, a lie, or a dodge."
+                  aria-label="Your witness answer"
+                  style="width:100%;box-sizing:border-box;background:var(--panel2);color:var(--ink);
+                         border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+          <button id="sendAnswer">Answer</button>
+          <span class="muted" style="font-size:12px">Ctrl+Enter to send. You choose what to reveal.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: live investigation -->
+  <div class="right">
+    <div class="panel">
+      <div class="grid">
+        <div>
+          <h2 id="activeCase">Investigation — choose a case to begin</h2>
+          <div class="kv"><span class="k">Status</span><span id="s_status" class="status">—</span></div>
+          <div class="kv"><span class="k">Iteration</span><span id="s_iter">0</span></div>
+          <div class="kv"><span class="k">Remaining budget</span><span id="s_budget">—</span></div>
+        </div>
+        <div>
+          <h2>Latest action</h2>
+          <div class="kv"><span class="k">Skill</span><span id="s_skill" class="mono">—</span></div>
+          <div class="kv"><span class="k">Tool</span><span id="s_tool" class="mono">—</span></div>
+          <div class="kv"><span class="k">Args</span><span id="s_args" class="mono">—</span></div>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <h2>Latest tool result</h2>
+        <div id="s_obs" class="mono muted">—</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Active hypotheses</h2>
+        <div id="hyps" class="empty">Start an investigation to seed hypotheses.</div>
+        <h2 style="margin-top:12px">🛡️ Judge &amp; skills (LLM mode)</h2>
+        <div id="jlog" class="empty">—</div>
+      </div>
+      <div class="panel">
+        <h2>Investigation state</h2>
+        <div><b>Known facts</b><ul id="facts"><li class="empty">none yet</li></ul></div>
+        <div><b>Contradictions</b><ul id="contras"><li class="empty">none</li></ul></div>
+        <div><b>Open questions</b><ul id="oq"><li class="empty">none</li></ul></div>
+        <div><b>Discounted / unrelated</b><ul id="unrel"><li class="empty">none</li></ul></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Evidence collected</h2>
+      <ul id="evidence"><li class="empty">none yet</li></ul>
+    </div>
+
+    <div class="panel">
+      <h2>Audit trace</h2>
+      <div id="trace" class="trace"><div class="empty">Every iteration is recorded here.</div></div>
+    </div>
+
+    <div class="panel" id="reportPanel" style="display:none">
+      <h2>Final report</h2>
+      <div id="report" class="mono"></div>
+    </div>
+
+    <div class="panel" id="evalPanel" style="display:none">
+      <h2>Hidden truth &amp; evaluation <span class="muted">(revealed only after completion)</span></h2>
+      <div id="evalBtnWrap"><button id="revealBtn" class="ghost">Reveal hidden truth &amp; score</button></div>
+      <div id="evalBody" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let CASES = [], selected = null, sid = null, view = null, renderedEvents = 0, requestBusy = false;
+
+async function api(path, opts){
+  const mutating = opts?.method === 'POST' && path.startsWith('/api/sessions');
+  if(mutating && requestBusy) throw new Error('A turn is still running. Please wait.');
+  if(mutating){ requestBusy = true; syncControls(); }
+  try{
+  const r = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  const body = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(body.detail || ('HTTP '+r.status));
+  return body;
+  }finally{ if(mutating){ requestBusy = false; syncControls(); } }
+}
+function syncControls(){
+  const canStep = !!sid && view?.state.status === 'investigating';
+  $('#start').disabled = !selected || requestBusy || autoRunning;
+  $('#step').disabled = !canStep || requestBusy || autoRunning;
+  $('#run').disabled = !canStep || requestBusy || autoRunning;
+  $('#reset').disabled = !sid || requestBusy || autoRunning;
+  $('#caseSelect').disabled = requestBusy || autoRunning;
+  $('#mode').disabled = requestBusy || autoRunning;
+  $('#start').textContent = sid ? 'Start a new investigation' : 'Start investigation';
+  $('#runHelp').textContent = requestBusy ? 'The agent is working. A turn may include several model calls.' :
+    view?.awaiting_human ? 'Your turn: read your role card below and answer the detective.' :
+    autoRunning ? 'Running automatically. Pause finishes the current turn, then waits.' :
+    sid && view?.state.status!=='investigating' ? 'Investigation finished. Review the report and reveal the score, or start a new case.' :
+    sid ? 'Use Next turn to inspect each decision, or Continue automatically.' :
+    'The agent chooses its tools. Pause to inspect a turn, or continue automatically.';
+}
+function err(msg){ $('#err').textContent = msg || ''; }
+
+async function loadCases(){
+  const {cases} = await api('/api/cases');
+  cases.sort((a,b)=>(b.inference==='model')-(a.inference==='model'));
+  CASES = cases;
+  const box = $('#caseSelect'); box.innerHTML='';
+  const groups = [
+    ['LLM-driven mysteries — recommended', c=>c.inference==='model'],
+    ['Human-in-the-loop — you play a witness', c=>c.human_played && c.inference!=='model'],
+    ['Authored comparison cases', c=>!c.human_played && c.inference!=='model']
+  ];
+  for(const [label, match] of groups){
+    const group=document.createElement('optgroup'); group.label=label;
+    cases.filter(match).forEach(c=>group.appendChild(new Option(c.case_id.replace('case-','')+' · '+c.title,c.case_id)));
+    if(group.children.length) box.appendChild(group);
+  }
+  selectCase(cases.find(c=>c.case_id===selected)?.case_id || cases.find(c=>c.inference==='model')?.case_id || cases[0]?.case_id);
+}
+function selectCase(id){
+  selected = id;
+  $('#caseSelect').value=id || '';
+  const c=CASES.find(c=>c.case_id===id);
+  $('#casePreview').innerHTML=c ? `<b>${escapeHtml(c.title)}</b><p>${escapeHtml(c.short_description)}</p>
+    <span class="badge">${escapeHtml(c.difficulty)}</span> <span class="badge">${c.budget} world actions</span>
+    <p>${c.human_played ? 'You play a witness. When the agent asks a question, your private role card and answer box appear below. These legacy cases use authored evidence weights.' : c.inference==='model' ? 'The model chooses tools, weighs evidence and infers the solution. The judge reviews its conclusion.' : 'Comparison case: evidence weights are authored, even when an LLM chooses the tools.'}</p>` : 'No cases available.';
+  syncControls();
+}
+$('#caseSelect').onchange=e=>selectCase(e.target.value);
+
+function updateModeNote(){
+  const m = $('#mode').value;
+  $('#modeNote').innerHTML = m==='llm'
+    ? 'The model chooses each action. A structural check and an independent LLM review assess its conclusion.'
+    : 'A fixed script, not an LLM. Use authored cases to compare it with the model-driven flow.';
+  // The schema-driver policy is not part of the native UI flow.
+  $('#llmOpts').style.display = 'none';
+}
+$('#mode').onchange = updateModeNote;
+// Keep LLM as the default; explain missing credentials without silently switching modes.
+(async ()=>{
+  try{
+    const cfg = await api('/api/config');
+    if(!cfg.has_api_key){
+      const opt = [...$('#mode').options].find(o=>o.value==='llm');
+      if(opt) opt.textContent = 'LLM agent (requires ANTHROPIC_API_KEY)';
+      $('#keyNotice').textContent='LLM mode needs ANTHROPIC_API_KEY on the server.';
+    }
+  }catch(e){}
+  updateModeNote();
+})();
+
+// ---- Custom case builder ----
+async function loadBuilder(){
+  const o = await api('/api/builder_options');
+  $('#b_type').innerHTML = o.incident_types.map(t=>`<option>${t}</option>`).join('');
+  $('#b_loc').innerHTML = o.locations.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+  $('#b_twist').innerHTML = o.twists.map(t=>`<option>${t}</option>`).join('');
+  $('#b_roster').innerHTML = o.roster.map((p,i)=>
+    `<label style="white-space:nowrap"><input type="checkbox" class="b_sus" value="${p.name}" ${i<3?'checked':''}> ${p.name} <span class="muted">(${p.role})</span></label>`).join('');
+  document.querySelectorAll('.b_sus').forEach(cb=>cb.onchange=refreshCulprit);
+  $('#b_extra').oninput = refreshCulprit;
+  refreshCulprit();
+}
+function selectedSuspects(){
+  const picked = [...document.querySelectorAll('.b_sus:checked')].map(c=>c.value);
+  const extra = $('#b_extra').value.split(',').map(s=>s.trim()).filter(Boolean);
+  return [...picked, ...extra];
+}
+function refreshCulprit(){
+  const cur = $('#b_culprit').value;
+  $('#b_culprit').innerHTML = '<option value="random">Culprit: random</option>' +
+    selectedSuspects().map(n=>`<option value="${escapeHtml(n)}" ${n===cur?'selected':''}>Culprit: ${escapeHtml(n)}</option>`).join('');
+}
+function currentRecipe(){
+  return {incident_type:$('#b_type').value, location:$('#b_loc').value,
+          suspects:selectedSuspects(), culprit:$('#b_culprit').value,
+          twist:$('#b_twist').value, red_herring:$('#b_herring').checked,
+          budget:parseInt($('#b_budget').value||'11',10)};
+}
+$('#b_create')?.addEventListener('click', async ()=>{
+  $('#b_msg').textContent = 'Generating and checking the case…';
+  try{
+    const r = await api('/api/custom_case', {method:'POST', body:JSON.stringify(currentRecipe())});
+    $('#b_msg').textContent = `✓ Created: ${r.briefing.title} (${r.case_id})`;
+    await loadCases(); selectCase(r.case_id);
+    // Return to setup with the new case selected.
+    $('#builderFold').open = false;
+  }catch(e){ $('#b_msg').textContent = '✗ ' + e.message; }
+});
+$('#b_ai')?.addEventListener('click', async ()=>{
+  $('#b_msg').textContent = 'Asking the model for a recipe…';
+  try{
+    const {recipe} = await api('/api/describe_case', {method:'POST', body:JSON.stringify({text:$('#b_desc').value})});
+    $('#b_type').value = recipe.incident_type; $('#b_twist').value = recipe.twist;
+    $('#b_budget').value = recipe.budget; $('#b_herring').checked = recipe.red_herring;
+    if(![...$('#b_loc').options].some(o=>o.value===recipe.location))
+      $('#b_loc').insertAdjacentHTML('beforeend', `<option value="${recipe.location}">${recipe.location}</option>`);
+    $('#b_loc').value = recipe.location;
+    document.querySelectorAll('.b_sus').forEach(cb=>cb.checked = recipe.suspects.includes(cb.value));
+    $('#b_extra').value = recipe.suspects.filter(n=>![...document.querySelectorAll('.b_sus')].some(cb=>cb.value===n)).join(', ');
+    refreshCulprit(); $('#b_culprit').value = recipe.culprit;
+    $('#b_msg').textContent = '✓ Recipe ready — review it, then select Create case.';
+  }catch(e){ $('#b_msg').textContent = '✗ ' + e.message; }
+});
+loadBuilder().catch(()=>{ $('#builder').innerHTML = '<span class="muted">Builder unavailable</span>'; });
+
+async function start(){
+  err('');
+  try{
+    const body = {case_id:selected, mode:$('#mode').value};
+    if(body.mode==='llm'){ body.policy = $('#policy').value; }
+    view = await api('/api/sessions', {method:'POST', body:JSON.stringify(body)});
+    sid = view.session_id;
+    $('#activeCase').textContent = view.briefing.title;
+    $('#briefingPanel').style.display='block';
+    $('#briefing').textContent = view.briefing.incident_report;
+    $('#reportPanel').style.display='none';
+    $('#evalPanel').style.display='none';
+    $('#evalBtnWrap').style.display='block'; $('#evalBody').innerHTML='';
+    $('#trace').innerHTML='';
+    renderedEvents = 0;
+    toggleControls(true);
+    render();
+    await run();
+  }catch(e){ err(e.message); }
+}
+// One turn at a time: /step is called repeatedly with a pause between calls, so the
+// trace grows one iteration at a time instead of arriving as a finished block. The
+// pause is presentation only — the engine is unchanged.
+let autoRunning = false;
+let runGeneration = 0;
+const AUTO_RUN_DELAY = 800; // ms between turns, for readability
+
+// Single place that owns the Run/Stop swap, so the flag and the buttons cannot desync.
+function setRunning(on){
+  runGeneration++;
+  autoRunning = on;
+  $('#run').style.display  = on ? 'none' : 'inline-block';
+  $('#stop').style.display = on ? 'inline-block' : 'none';
+  syncControls();
+}
+
+async function step(){
+  try{ view = await api(`/api/sessions/${sid}/step`, {method:'POST'}); render(view.latest); }
+  catch(e){ err(e.message); }
+}
+
+// Execute one turn, render it, then decide whether to keep going. A turn that parks on
+// a human question returns no `latest` (nothing happened in the world yet), which
+// render() already tolerates.
+async function autoStep(generation=runGeneration){
+  if(generation!==runGeneration || !autoRunning) return;
+  try{
+    view = await api(`/api/sessions/${sid}/step`, {method:'POST'});
+    render(view.latest);
+  }catch(e){
+    err(e.message);
+    setRunning(false);
+    return;
+  }
+  if(generation!==runGeneration) return;
+
+  const stillInvestigating = view.state.status === 'investigating' && !view.awaiting_human;
+  if(stillInvestigating){
+    if(!autoRunning) return;            // user pressed Stop
+    await new Promise(r => setTimeout(r, AUTO_RUN_DELAY));
+    if(autoRunning && generation===runGeneration) autoStep(generation);
+    return;
+  }
+  setRunning(false);
+  if(view.awaiting_human) renderInterview();
+  render();
+}
+
+async function run(){
+  if(autoRunning) return;               // already stepping
+  err('');
+  setRunning(true);
+  autoStep();
+}
+
+function stop(){ setRunning(false); }
+// The run is parked until a person answers. Nothing else can supply this text —
+// the agent has no parameter for it.
+async function sendAnswer(){
+  const box = $('#answerBox');
+  const text = box.value.trim();
+  if(!text){ err('Say something — the detective is waiting.'); return; }
+  err('');
+  $('#sendAnswer').disabled = true;
+  try{
+    view = await api(`/api/sessions/${sid}/answer`,
+                     {method:'POST', body:JSON.stringify({answer:text})});
+    box.value = '';
+    render(view.latest);
+    // The answer unparks the run, so carry on from here — one turn at a time. The agent
+    // may come straight back with another question, which parks it again.
+    if(view.state.status === 'investigating' && !autoRunning){
+      setRunning(true);
+      autoStep();
+    }
+  }catch(e){ err(e.message); }
+  finally{ $('#sendAnswer').disabled = false; }
+}
+function renderInterview(){
+  const panel = $('#interviewPanel');
+  const q = view.pending_question;
+  if(!view.awaiting_human || !q){ panel.style.display='none'; return; }
+  panel.style.display='block';
+  $('#roleCard').textContent = q.role_card || '';
+  $('#askName').textContent  = q.character_name || q.suspect || '';
+  $('#askQuestion').textContent = q.question || '';
+  $('#answerBox').focus();
+}
+async function reset(){
+  setRunning(false);   // abandon any auto-run before the session is rebuilt
+  view = await api(`/api/sessions/${sid}/reset`, {method:'POST'});
+  $('#trace').innerHTML=''; $('#reportPanel').style.display='none'; $('#evalPanel').style.display='none';
+  renderedEvents = 0;
+  $('#evalBtnWrap').style.display='block'; $('#evalBody').innerHTML='';
+  $('#interviewPanel').style.display='none'; $('#answerBox').value='';
+  toggleControls(true); render();
+}
+function toggleControls(on){
+  $('#step').disabled=!on; $('#run').disabled=!on; $('#reset').disabled=!on;
+}
+
+function render(latest){
+  const st = view.state;
+  // 'awaiting_human' is a pause, not an ending — the run resumes once someone answers.
+  const parked = st.status === 'awaiting_human';
+  const finished = st.status !== 'investigating' && !parked;
+  $('#s_status').textContent = st.status;
+  $('#s_status').className = 'status ' + st.status;
+  $('#s_iter').textContent = st.iteration;
+  $('#s_budget').textContent = st.remaining_budget;
+  if(latest){
+    $('#s_skill').textContent = latest.skill;
+    $('#s_tool').textContent = latest.tool || '—';
+    $('#s_args').textContent = JSON.stringify(latest.tool_arguments||{});
+    $('#s_obs').textContent = latest.observation || '—';
+  }else if(st.iteration===0){
+    for(const id of ['s_skill','s_tool','s_args','s_obs']) $('#'+id).textContent='—';
+  }
+  for(const e of (view.events||[]).slice(renderedEvents)){
+    if(e.audit){ addTraceRow(e.audit); }
+    else {
+      const row=document.createElement('div'); row.className='row';
+      if(e.type==='think'){
+        const details=document.createElement('details');
+        const label=document.createElement('summary'); label.textContent='Agent reasoning';
+        const body=document.createElement('div'); body.className='muted'; body.textContent=e.text;
+        details.append(label,body); row.appendChild(details);
+      } else if(e.type==='gate') {
+        row.textContent=e.phase==='revise'?'↻ Critique returned: '+(e.issues||[]).join(' '):
+          'Judge: '+(e.passed?'accepted':'not accepted')+' — '+(e.issues||[]).join(' ')
+          + (e.advisories?.length?' Review notes: '+e.advisories.join(' '):'');
+      } else { row.textContent='Skill: '+(e.input?.name||e.name); }
+      $('#trace').appendChild(row);
+    }
+  }
+  renderedEvents=(view.events||[]).length;
+  // hypotheses
+  const hy = $('#hyps');
+  if(!st.hypotheses.length){ hy.className='empty'; hy.textContent='none yet'; }
+  else{
+    hy.className='';
+    hy.innerHTML = st.hypotheses.slice().sort((a,b)=>b.confidence-a.confidence).map(h=>{
+      const pct = Math.round(h.confidence*100);
+      return `<div class="hyp"><div class="top"><span><b>${h.suspect}</b> <span class="muted">${h.claim}</span></span><span class="mono">${h.confidence.toFixed(2)}</span></div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <div class="muted" style="font-size:12px">support: ${h.supporting_evidence.length} · contra: ${h.contradicting_evidence.length} · independent: [${(h.independent_types||[]).join(', ')}]</div></div>`;
+    }).join('');
+  }
+  // Native agent judge and skill events (LLM mode).
+  const jl = $('#jlog');
+  const evs = view.agent_events || [];
+  if(!evs.length){ jl.className='empty'; jl.textContent='—'; }
+  else{
+    jl.className='';
+    jl.innerHTML = evs.slice(-8).map(e=>{
+      if(e.type==='tool') return `<div class="muted" style="font-size:12px">📖 get_skill(${escapeHtml(e.input?.name||'')})</div>`;
+      if(e.type==='gate' && e.phase==='judge')
+        return `<div style="font-size:12px">🛡️ conclusion ${escapeHtml(e.proposal?.verdict||'')} → `
+          + (e.passed?'<span class="status solved">accepted</span>'
+                     :'<span class="status" style="color:var(--bad)">rejected</span>'
+                      + (e.issues?.length?`<div class="muted">${escapeHtml(e.issues[0])}</div>`:''))
+          + `</div>`;
+      if(e.type==='gate' && e.phase==='revise')
+        return `<div class="muted" style="font-size:12px">↻ Critique returned to the agent</div>`;
+      return '';
+    }).join('');
+  }
+
+  fillList('#facts', st.known_facts);
+  fillList('#contras', st.contradictions);
+  fillList('#oq', st.open_questions.map(q=>q.note));
+  fillList('#unrel', st.unverified_claims);
+  fillList('#evidence', st.evidence_collected.map(e=>`${e.description} <span class="muted">[${e.independent_type}${e.supports? ' → '+e.supports:''}]</span>`), true);
+
+  renderInterview();
+  // While parked, Step/Run would only return 409 — the answer is the way forward.
+  if(parked){ $('#step').disabled=true; $('#run').disabled=true; $('#reset').disabled=false; }
+
+  if(finished){
+    showReport(st.final_report, st.status);
+    $('#evalPanel').style.display='block';
+    toggleControls(false); $('#reset').disabled=false;
+  }
+  syncControls();
+}
+function fillList(sel, arr, html){
+  const el = $(sel);
+  if(!arr || !arr.length){ el.innerHTML = '<li class="empty">none</li>'; return; }
+  el.innerHTML = arr.map(x=>`<li>${html? x : escapeHtml(x)}</li>`).join('');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Fully descriptive labels for skills and tools
+const skillLabels = {
+  'unspecified': 'Initial Step',
+  'timeline_reconstruction': 'Build Timeline (establish chronology)',
+  'statement_validation': 'Validate Statements (check for lies)',
+  'final_case_synthesis': 'Synthesize Case (prepare conclusion)',
+  'getting_started': 'Getting Started'
+};
+
+const toolLabels = {
+  'read_incident_report': 'Read Incident Report (case overview)',
+  'interview_character': 'Interview Suspect (get their account)',
+  'interview_human': 'Interview Human (real person answers)',
+  'inspect_location': 'Inspect Location (look for physical evidence)',
+  'analyze_object': 'Analyze Object (examine for clues)',
+  'check_access_log': 'Check Access Log (who was where/when)',
+  'review_camera': 'Review Camera (watch the footage)',
+  'verify_alibi': 'Verify Alibi (test their story)',
+  'compare_testimonies': 'Compare Testimonies (find contradictions)',
+  'get_skill': 'Load Investigation Skill (playbook)',
+  'establish_fact': 'Infer a fact from cited evidence',
+  'assess_evidence': 'Weigh or revise evidence',
+  'submit_conclusion': 'Submit Conclusion (make accusation)'
+};
+
+const sourceLabels = {
+  'llm': 'LLM (language model decided)',
+  'rule_based': 'Rule-based (deterministic logic)',
+  'closing': 'Closing Turn (final move)',
+  'loop_guard': 'Safety Guard (system prevented error)'
+};
+
+const verdictLabels = {
+  'progress': '✓ New Evidence Found',
+  'no_progress': '○ No New Info',
+  'wasted': '⚠︎ Illegal/Wasted'
+};
+
+function getLabel(map, id, fallback) {
+  return map[id] || id || fallback;
+}
+
+function addTraceRow(a){
+  const t = $('#trace');
+  if(t.querySelector('.empty')) t.innerHTML='';
+  const div = document.createElement('div');
+  div.className = 'row' + (a.stop_decision?' stop':'');
+  const changes = (a.state_changes||[]).map(c=>`<div>• ${escapeHtml(c)}</div>`).join('');
+  const src = a.decision_source && a.decision_source!=='rule_based' && a.decision_source!=='closing'
+    ? `<span class="chip" style="background:#3a2a12;color:#e8c07d" title="${a.decision_source}">${getLabel(sourceLabels, a.decision_source)}</span>` : '';
+  const fb = a.fallback_used
+    ? `<span class="chip" style="background:#3a1e1e;color:#f0a3a3">fallback: ${escapeHtml(a.failure_reason||'')}</span>` : '';
+  const vcol = {progress:['#12331c','#7ee0a0'], no_progress:['#2a2f36','#9aa7b4'], wasted:['#3a1e1e','#f0a3a3']};
+  const v = a.verification;
+  const ver = v ? `<span class="chip" style="background:${(vcol[v.verdict]||vcol.no_progress)[0]};color:${(vcol[v.verdict]||vcol.no_progress)[1]}" title="${escapeHtml(v.reason)}">${getLabel(verdictLabels, v.verdict)}</span>` : '';
+  const legal = (a.legal_actions&&a.legal_actions.length) ? `<span class="chip" title="${escapeHtml(a.legal_actions.join(', '))}">${a.legal_actions.length} legal choices before this step</span>` : '';
+  const cd = (a.confidence_deltas||[]).filter(d=>d.previous!==d.new)
+    .map(d=>`<div>• ${d.suspect}: ${d.previous.toFixed(2)}→${d.new.toFixed(2)} (${d.reason}, w=${d.weight}, src=${escapeHtml(d.source_group||'')})</div>`).join('');
+  const toolLabel = a.tool ? `<div><b>Tool:</b> <code>${a.tool}</code> — ${getLabel(toolLabels, a.tool)}${a.tool_ok?'':', ⚠︎ Failed'}</div>` : '';
+  const skillLabel = a.skill ? `<div><b>Skill:</b> <code>${a.skill}</code> — ${getLabel(skillLabels, a.skill)}</div>` : '';
+  const resultLabel = ver ? `<div><b>Result:</b> ${ver}</div>` : '';
+  const budgetLabel = `<div><b>Budget:</b> ${a.remaining_budget} world actions left ${legal}</div>`;
+  const stopLabel = !a.continue_investigation ? `<div style="color:#f0a3a3"><b>🛑 INVESTIGATION STOPPED</b></div>` : '';
+
+  div.innerHTML = `<div class="hd"><span class="it" style="font-size:14px;font-weight:600">Iteration ${a.iteration}</span></div>
+    <div style="margin:8px 0;padding:8px;background:var(--panel2);border-radius:4px">
+      ${toolLabel}
+      ${skillLabel}
+      ${resultLabel}
+      ${budgetLabel}
+      ${src}
+      ${fb}
+      ${stopLabel}
+    </div>
+    <div class="muted" style="margin:4px 0">${escapeHtml(a.decision||'')}</div>
+    ${a.observation?`<div class="mono" style="font-size:12px;margin:8px 0">${escapeHtml(a.observation)}</div>`:''}
+    <div class="changes">${changes}${cd}</div>`;
+  t.appendChild(div);
+}
+
+function showReport(r, status){
+  if(!r) return;
+  $('#reportPanel').style.display='block';
+  const rows = [
+    ['status', r.status],['culprit', r.culprit],['action', r.action],['method', r.method],
+    ['location', r.location],['time', r.time],['motive', r.motive],
+    ['confidence', r.confidence]
+  ];
+  const kv = rows.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span>${v===null||v===undefined?'<span class="muted">null</span>':v}</span></div>`).join('');
+  const list = (title, arr) => `<div style="margin-top:8px"><b>${title}</b><ul>${(arr&&arr.length)?arr.map(x=>`<li>${escapeHtml(typeof x==='string'?x:JSON.stringify(x))}</li>`).join(''):'<li class="empty">none</li>'}</ul></div>`;
+  // Both are derived from the investigation, not from hidden truth: one formats the
+  // accepted state, the other is the agent's narrative. Neither certifies correctness.
+  const agentSummary = r.agent_summary
+    ? `<div style="margin-top:8px"><b>agent's account</b><div class="muted">${escapeHtml(r.agent_summary)}</div></div>`
+    : '';
+  $('#report').innerHTML = kv
+    + `<div style="margin-top:8px"><b>summary (engine)</b><div class="muted">${escapeHtml(r.investigation_summary||'')}</div></div>`
+    + agentSummary
+    + list('key evidence', r.key_evidence)
+    + list('rejected hypotheses', (r.rejected_hypotheses||[]).map(h=>`${h.suspect} (${h.confidence}) — ${h.reason}`))
+    + list('unresolved questions', r.unresolved_questions);
+}
+
+$('#revealBtn').onclick = async ()=>{
+  try{
+    const {evaluation, hidden_truth, report} = await api(`/api/sessions/${sid}/evaluation`);
+    $('#evalBtnWrap').style.display='none';
+    const fields = ['culprit','action','method','location','time','motive'];
+    const trows = fields.map(f=>{
+      const truth = hidden_truth[f], got = report[f];
+      const ok = got!==null && got===truth;
+      return `<tr><td>${f}</td><td class="mono">${truth}</td><td class="mono">${got===null?'<span class="muted">null</span>':got}</td>
+        <td class="${got===null?'':(ok?'ok':'no')}">${got===null?'—':(ok?'✓':'✗')}</td></tr>`;
+    }).join('');
+    $('#evalBody').innerHTML = `
+      <table class="truth" style="width:100%;border-collapse:collapse">
+        <tr class="muted"><td>field</td><td>hidden truth</td><td>agent said</td><td>✓</td></tr>${trows}
+      </table>
+      <div class="grid" style="margin-top:12px">
+        <div>
+          <div class="kv"><span class="k">Total score</span><span class="status">${evaluation.total_score}/100</span></div>
+          <div class="kv"><span class="k">Expected status</span><span>${evaluation.expected_status}</span></div>
+          <div class="kv"><span class="k">Reported status</span><span>${evaluation.reported_status}</span></div>
+          <div class="kv"><span class="k">Status match</span><span>${evaluation.status_match?'✓':'✗'}</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="k">Actions used</span><span>${evaluation.actions_used} / ${evaluation.budget}</span></div>
+          <div class="kv"><span class="k">Missed required evidence</span><span>${evaluation.missed_required_evidence.length||'none'}</span></div>
+          <div class="kv"><span class="k">Unsupported claims</span><span>${evaluation.unsupported_claims.length}</span></div>
+          <div class="kv"><span class="k">Correct unresolved handling</span><span>${evaluation.correct_unresolved_handling===null?'n/a':(evaluation.correct_unresolved_handling?'✓':'✗')}</span></div>
+        </div>
+      </div>
+      ${evaluation.run_metadata?`<div style="margin-top:10px"><h2>Run integrity</h2>
+        <div class="kv"><span class="k">Requested mode</span><span>${evaluation.run_metadata.requested_mode}</span></div>
+        <div class="kv"><span class="k">LLM / fallback / invalid decisions</span><span>${evaluation.run_metadata.llm_decisions} / ${evaluation.run_metadata.fallback_decisions} / ${evaluation.run_metadata.invalid_decisions}</span></div>
+        <div class="kv"><span class="k">Fully LLM-driven</span><span>${evaluation.run_metadata.fully_llm_driven?'✓':'✗'}</span></div>
+        <div class="kv"><span class="k">Integrity OK</span><span>${evaluation.llm_integrity_ok?'✓':'✗'}</span></div>
+      </div>`:''}`;
+  }catch(e){ err(e.message); }
+};
+
+$('#start').onclick = start;
+$('#step').onclick = step;
+$('#run').onclick = run;
+$('#stop').onclick = stop;
+$('#reset').onclick = ()=>reset().catch(e=>err(e.message));
+$('#sendAnswer').onclick = sendAnswer;
+$('#answerBox').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); sendAnswer(); }
+});
+loadCases().catch(e=>err('Could not load cases: '+e.message));
+</script>
+</body>
+</html>

@@ -1,0 +1,355 @@
+{
+  "case_id": "case-006",
+  "title": "The Mailroom Relay",
+  "difficulty": "llm advantage",
+  "short_description": "A phishing relay was staged from a mailroom security desk. The report points at a specific open question and a clue-rich printer queue, but the fixed policy wastes its budget scanning decoy objects first.",
+  "budget": 6,
+  "incident_report": "Between 06:10 and 06:25, a phishing relay was launched from the mailroom security desk and routed through the badge-printer workstation. The relay used a template called 'blue docket'. Staff with partial access: Nina (facilities), Omar (courier lead), Petra (mailroom admin), and Quinn (contractor). Quinn was seen leaving with a blue folder, but the incident note says the suspicious phrase was 'blue docket', not a folder.",
+  "index": {
+    "suspects": [
+      "nina",
+      "omar",
+      "petra",
+      "quinn"
+    ],
+    "location": "mailroom_security_desk",
+    "time_window": {
+      "from": "06:10",
+      "to": "06:25"
+    },
+    "objects": [
+      "delivery_manifest",
+      "badge_printer",
+      "coffee_mug",
+      "printer_queue",
+      "courier_tablet"
+    ],
+    "characters": [
+      {
+        "id": "nina",
+        "name": "Nina",
+        "role": "facilities"
+      },
+      {
+        "id": "omar",
+        "name": "Omar",
+        "role": "courier lead"
+      },
+      {
+        "id": "petra",
+        "name": "Petra",
+        "role": "mailroom admin"
+      },
+      {
+        "id": "quinn",
+        "name": "Quinn",
+        "role": "contractor"
+      }
+    ],
+    "locations": [
+      {
+        "id": "mailroom_security_desk",
+        "name": "Mailroom Security Desk"
+      },
+      {
+        "id": "loading_bay",
+        "name": "Loading Bay"
+      }
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "petra",
+    "action": "launched_phishing_relay",
+    "method": "printer_queue_macro",
+    "location": "mailroom_security_desk",
+    "time": "06:18",
+    "motive": "cover_badge_clone_sales"
+  },
+  "required_evidence": [
+    "al_petra_console",
+    "loc_clone_motive",
+    "obj_printer_queue_macro",
+    "alibi_quinn_blue_folder"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true,
+    "baseline_expected": "budget_exhausted"
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "A phishing relay was launched from the mailroom security desk between 06:10 and 06:25. The report distinguishes the template phrase 'blue docket' from Quinn's unrelated blue folder.",
+      "evidence": [
+        {
+          "id": "rep_quinn_blue_folder",
+          "supports": "quinn",
+          "weight": 0.0,
+          "relates_to_incident": false,
+          "independent_type": "statement",
+          "reveals": {},
+          "description": "Quinn was seen with a blue folder, which is easy to confuse with the 'blue docket' relay phrase.",
+          "raises_question": {
+            "suspect": "quinn",
+            "note": "Quinn's blue folder may be a language trap; verify whether it relates to the 'blue docket' relay."
+          }
+        }
+      ]
+    },
+    "check_access_log": {
+      "mailroom_security_desk": {
+        "observation": "Console access shows Petra's account unlocking the badge-printer workstation at 06:18. Nina and Omar only badged into the loading bay before the incident window.",
+        "evidence": [
+          {
+            "id": "al_petra_console",
+            "supports": "petra",
+            "weight": 0.24,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {
+              "time": "06:18"
+            },
+            "description": "Petra's account unlocked the badge-printer workstation at 06:18."
+          },
+          {
+            "id": "al_nina_loading_bay",
+            "supports": "nina",
+            "weight": -0.1,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {},
+            "description": "Nina only badged into the loading bay before the relay window."
+          },
+          {
+            "id": "al_omar_loading_bay",
+            "supports": "omar",
+            "weight": -0.1,
+            "relates_to_incident": true,
+            "independent_type": "access",
+            "reveals": {},
+            "description": "Omar only badged into the loading bay before the relay window."
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "mailroom_security_desk": {
+        "observation": "The camera catches Quinn crossing the hallway with a blue folder at 06:19, but the desk itself is blocked by a supply cart.",
+        "evidence": [
+          {
+            "id": "cam_quinn_folder",
+            "supports": "quinn",
+            "weight": 0.18,
+            "relates_to_incident": true,
+            "independent_type": "camera",
+            "reveals": {},
+            "description": "Camera shows Quinn with a blue folder near the mailroom hallway, not at the workstation."
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "mailroom_security_desk": {
+        "observation": "The desk trash contains torn labels from cloned visitor badges and a draft invoice for off-book badge access. The printer tray itself is empty.",
+        "evidence": [
+          {
+            "id": "loc_clone_motive",
+            "supports": "petra",
+            "weight": 0.14,
+            "relates_to_incident": true,
+            "independent_type": "scene",
+            "reveals": {
+              "action": "launched_phishing_relay",
+              "motive": "cover_badge_clone_sales"
+            },
+            "description": "Cloned-badge labels and an off-book access invoice tie the relay to Petra's badge-sales cover-up."
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "delivery_manifest": {
+        "observation": "The delivery manifest only records routine courier bags and has no relay template, macro, or workstation timestamp.",
+        "evidence": [
+          {
+            "id": "obj_manifest_routine",
+            "supports": null,
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Delivery manifest is routine and unrelated to the relay."
+          }
+        ]
+      },
+      "badge_printer": {
+        "observation": "The badge printer shows normal hardware counters. It was used as a workstation, but the macro itself is not stored in printer firmware.",
+        "evidence": [
+          {
+            "id": "obj_badge_printer_counter",
+            "supports": null,
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Badge-printer hardware counters do not identify the relay macro."
+          }
+        ]
+      },
+      "coffee_mug": {
+        "observation": "The coffee mug has Petra's initials, but it is her regular desk mug and predates the incident.",
+        "evidence": [
+          {
+            "id": "obj_mug_stale",
+            "supports": "petra",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "Petra's mug is a stale desk item, not incident evidence."
+          }
+        ]
+      },
+      "printer_queue": {
+        "observation": "The deleted printer queue contains a macro named 'blue docket'. It launched the phishing relay at 06:18 from Petra's account.",
+        "evidence": [
+          {
+            "id": "obj_printer_queue_macro",
+            "supports": "petra",
+            "weight": 0.22,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {
+              "method": "printer_queue_macro",
+              "action": "launched_phishing_relay"
+            },
+            "description": "The 'blue docket' printer-queue macro launched the relay from Petra's account."
+          }
+        ]
+      },
+      "courier_tablet": {
+        "observation": "The courier tablet was charging and has no network traffic during the incident window.",
+        "evidence": [
+          {
+            "id": "obj_tablet_idle",
+            "supports": "omar",
+            "weight": -0.08,
+            "relates_to_incident": true,
+            "independent_type": "object",
+            "reveals": {},
+            "description": "The courier tablet was idle during the relay."
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "nina": {
+        "observation": "Nina says she was restocking the loading bay and heard no printer activity.",
+        "evidence": [
+          {
+            "id": "int_nina_loading",
+            "supports": "nina",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Nina reports routine loading-bay work."
+          }
+        ]
+      },
+      "omar": {
+        "observation": "Omar says he was sorting courier bags and did not use the security desk.",
+        "evidence": [
+          {
+            "id": "int_omar_bags",
+            "supports": "omar",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Omar reports routine courier sorting."
+          }
+        ]
+      },
+      "petra": {
+        "observation": "Petra says she only opened the workstation to print visitor badges and never touched the queue.",
+        "evidence": [
+          {
+            "id": "int_petra_denial",
+            "supports": "petra",
+            "weight": 0.0,
+            "relates_to_incident": true,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Petra denies touching the printer queue.",
+            "raises_question": {
+              "suspect": "petra",
+              "note": "Petra denies touching the queue despite the macro trail."
+            }
+          }
+        ]
+      },
+      "quinn": {
+        "observation": "Quinn says the blue folder held contractor insurance forms and was never near the security desk.",
+        "evidence": [
+          {
+            "id": "int_quinn_folder",
+            "supports": "quinn",
+            "weight": 0.0,
+            "relates_to_incident": false,
+            "independent_type": "statement",
+            "reveals": {},
+            "description": "Quinn says the blue folder held insurance forms."
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "quinn": {
+        "observation": "Quinn's blue folder is cleared: the contractor forms were scanned at the front desk, and Quinn never logged into the badge-printer workstation.",
+        "evidence": [
+          {
+            "id": "alibi_quinn_blue_folder",
+            "supports": "quinn",
+            "weight": -0.2,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Quinn's blue folder was unrelated paperwork, not the 'blue docket' relay.",
+            "resolves_question": "quinn"
+          }
+        ]
+      },
+      "petra": {
+        "observation": "Petra's claim fails: spooler logs show her account edited the queue macro before the relay.",
+        "evidence": [
+          {
+            "id": "alibi_petra_queue",
+            "supports": "petra",
+            "weight": 0.12,
+            "relates_to_incident": true,
+            "independent_type": "alibi",
+            "reveals": {},
+            "description": "Petra's queue denial is contradicted by spooler logs.",
+            "resolves_question": "petra"
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "petra|quinn": {
+        "observation": "Quinn's folder account checks out; Petra's denial conflicts with the queue macro.",
+        "evidence": [
+          {
+            "id": "cmp_petra_quinn",
+            "supports": "petra",
+            "weight": 0.05,
+            "relates_to_incident": true,
+            "independent_type": "testimony",
+            "reveals": {},
+            "description": "The language trap clears Quinn and leaves Petra's printer-queue denial unsupported."
+          }
+        ]
+      }
+    }
+  }
+}

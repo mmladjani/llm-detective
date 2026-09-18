@@ -1,0 +1,247 @@
+{
+  "case_id": "case-012",
+  "title": "The Server Room Breach (model inference)",
+  "difficulty": "misleading witness",
+  "short_description": "A database copy, a suspect's unrelated lie, and a choice of physical and digital leads. Interpret every record yourself.",
+  "budget": 11,
+  "incident_report": "Overnight, between 02:30 and 02:50, a full copy of the customer database was taken from the server room. Access is limited to three staff: Idris (database admin), Sara (sysadmin), and Tomas (night security). Tomas was seen leaving the building at 02:55 and volunteered an alibi for earlier in the night. Management wants to know who copied the data and how.",
+  "index": {
+    "suspects": [
+      "idris",
+      "tomas",
+      "sara"
+    ],
+    "location": "server_room",
+    "time_window": {
+      "from": "02:30",
+      "to": "02:50"
+    },
+    "objects": [
+      "usb_drive",
+      "server_console"
+    ],
+    "characters": [
+      {
+        "id": "idris",
+        "name": "Idris",
+        "role": "database admin"
+      },
+      {
+        "id": "tomas",
+        "name": "Tomas",
+        "role": "night security"
+      },
+      {
+        "id": "sara",
+        "name": "Sara",
+        "role": "sysadmin"
+      }
+    ],
+    "locations": [
+      {
+        "id": "server_room",
+        "name": "Server Room"
+      },
+      {
+        "id": "corridor",
+        "name": "Corridor"
+      }
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "idris",
+    "action": "copied_database",
+    "method": "usb_drive",
+    "location": "server_room",
+    "time": "02:44",
+    "motive": "sell_data"
+  },
+  "required_evidence": [
+    "al_idris",
+    "cam_idris",
+    "obj_usb"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "A customer database was copied from the server room between 02:30 and 02:50. Staff with access: Idris (DBA), Sara (sysadmin), Tomas (night security). Tomas was seen leaving at 02:55 and offered an alibi.",
+      "evidence": [
+        {
+          "id": "rep_tomas_flag",
+          "independent_type": "statement",
+          "raises_question": {
+            "suspect": "tomas",
+            "note": "Tomas was near the building and volunteered an alibi — it should be checked before drawing conclusions."
+          },
+          "description": "Tomas was seen leaving at 02:55 and gave an alibi for earlier."
+        }
+      ]
+    },
+    "check_access_log": {
+      "server_room": {
+        "observation": "Badge log: Idris entered the server room at 02:38 and left at 02:47. Sara's badge was not present overnight. Tomas's guard badge covers corridors only — no server-room entry all night.",
+        "evidence": [
+          {
+            "id": "al_idris",
+            "independent_type": "access",
+            "description": "Idris badged into the server room from 02:38 to 02:47 — across the incident window."
+          },
+          {
+            "id": "al_sara_absent",
+            "independent_type": "access",
+            "description": "Sara's badge was not on site overnight."
+          },
+          {
+            "id": "al_tomas_nosr",
+            "independent_type": "access",
+            "description": "Tomas's badge never opened the server room; his access covers corridors only."
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "server_room": {
+        "observation": "Server-room camera at 02:41 shows Idris at the rack inserting a USB drive. No one else enters during the window.",
+        "evidence": [
+          {
+            "id": "cam_idris",
+            "independent_type": "camera",
+            "description": "Camera shows Idris at the rack inserting a USB drive at 02:41."
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "server_room": {
+        "observation": "The console was left logged in under Idris's account, with a data-broker marketplace listing open in a browser tab. No forced entry.",
+        "evidence": [
+          {
+            "id": "loc_broker",
+            "independent_type": "scene",
+            "description": "A customer-data sale listing was open in a data-broker marketplace under Idris's session."
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "usb_drive": {
+        "observation": "A USB drive recovered from Idris's bag holds a complete copy of the customer database, written at 02:44.",
+        "evidence": [
+          {
+            "id": "obj_usb",
+            "independent_type": "object",
+            "description": "USB drive in Idris's bag contains the copied database, timestamped 02:44."
+          }
+        ]
+      },
+      "server_console": {
+        "observation": "The console command history shows a bulk export run at 02:43 under Idris's login.",
+        "evidence": [
+          {
+            "id": "obj_console",
+            "independent_type": "object",
+            "description": "A bulk export command ran at 02:43 under Idris's login."
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "idris": {
+        "observation": "Idris denies everything and suggests Tomas, who was 'creeping around', must be responsible.",
+        "evidence": [
+          {
+            "id": "int_idris",
+            "independent_type": "statement",
+            "description": "Idris denies involvement and tries to redirect suspicion to Tomas."
+          }
+        ]
+      },
+      "tomas": {
+        "observation": "Tomas insists he was at the 24-hour café down the street during his break and had nothing to do with the server room.",
+        "evidence": [
+          {
+            "id": "int_tomas",
+            "independent_type": "statement",
+            "raises_question": {
+              "suspect": "tomas",
+              "note": "Tomas's café alibi should be verified."
+            },
+            "description": "Tomas claims he was at a 24-hour café during his break."
+          }
+        ]
+      },
+      "sara": {
+        "observation": "Sara says she was home asleep; her badge confirms she was off-site.",
+        "evidence": [
+          {
+            "id": "int_sara",
+            "independent_type": "statement",
+            "description": "Sara says she was home; her badge confirms she was off-site."
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "tomas": {
+        "observation": "The café has no record of Tomas. A competitor's reception camera and visitor register place him at a job interview from 02:25 to 02:50; he says he did not want his employer to know he was looking for another job.",
+        "evidence": [
+          {
+            "id": "alibi_tomas_unrelated",
+            "independent_type": "alibi",
+            "resolves_question": "tomas",
+            "description": "The competitor's visitor register and camera place Tomas at a job interview from 02:25 to 02:50, contrary to his café account."
+          }
+        ]
+      },
+      "idris": {
+        "observation": "Idris claimed he was asleep at home; his badge, the camera, and the USB drive all contradict this.",
+        "evidence": [
+          {
+            "id": "alibi_idris_broken",
+            "independent_type": "alibi",
+            "resolves_question": "idris",
+            "description": "Idris's alibi is false; the badge, camera and USB place him at the rack."
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "idris|tomas": {
+        "observation": "Idris blames Tomas, but Tomas had no server-room access, while Idris's own badge, the camera and the USB drive place him at the rack. The redirection does not hold.",
+        "evidence": [
+          {
+            "id": "cmp_it",
+            "independent_type": "statement",
+            "description": "Idris's attempt to blame Tomas is refuted by physical evidence."
+          }
+        ]
+      }
+    }
+  },
+  "inference": "model",
+  "fact_candidates": {
+    "action": [
+      "deleted_database",
+      "copied_database",
+      "modified_database"
+    ],
+    "method": [
+      "remote_login",
+      "usb_drive",
+      "printed_records"
+    ],
+    "motive": [
+      "cover_error",
+      "sell_data",
+      "routine_backup"
+    ],
+    "time": [
+      "02:35",
+      "02:44",
+      "02:47"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+# Keep the function bundle to what actually serves requests.
+# Nothing listed here is imported by app.py at request time.
+
+tests/
+eval/
+docs/
+inputs/
+outputs/
+
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+*.log
+.DS_Store
+
+# Scratch folders that live on disk but are never deployed.
+_r/
+_s/
+_t/
+_u/
+
+# NOTE: do NOT ignore cases/, skills/ or web/ — the engine reads the case tables,
+# the agent loads skill playbooks with get_skill, and the UI is served from web/
+# via FileResponse, all from disk at request time.

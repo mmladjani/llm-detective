@@ -1,0 +1,242 @@
+{
+  "case_id": "case-013",
+  "title": "The Borrowed Badge",
+  "difficulty": "framing and hypothesis revision",
+  "short_description": "A badge log and an eyewitness point to the same employee. Check whether those sources really identify the person.",
+  "budget": 10,
+  "inference": "model",
+  "incident_report": "A prototype was removed from the lab between 18:10 and 18:30. Alex maintains the lab, Blair handles deliveries, and Casey works at reception. Investigate the records before accusing anyone.",
+  "index": {
+    "suspects": [
+      "alex",
+      "blair",
+      "casey"
+    ],
+    "location": "lab",
+    "time_window": {
+      "from": "18:10",
+      "to": "18:30"
+    },
+    "objects": [
+      "badge_reader",
+      "delivery_crate"
+    ],
+    "characters": [
+      {
+        "id": "alex",
+        "name": "Alex",
+        "role": "technician"
+      },
+      {
+        "id": "blair",
+        "name": "Blair",
+        "role": "courier"
+      },
+      {
+        "id": "casey",
+        "name": "Casey",
+        "role": "receptionist"
+      }
+    ],
+    "locations": [
+      {
+        "id": "lab",
+        "name": "Lab"
+      },
+      {
+        "id": "reception",
+        "name": "Reception"
+      }
+    ]
+  },
+  "fact_candidates": {
+    "action": [
+      "damaged_prototype",
+      "stole_prototype",
+      "replaced_prototype"
+    ],
+    "method": [
+      "forced_door",
+      "stolen_badge",
+      "shared_key"
+    ],
+    "motive": [
+      "hide_defect",
+      "sell_prototype",
+      "personal_revenge"
+    ],
+    "time": [
+      "18:12",
+      "18:22",
+      "18:28"
+    ]
+  },
+  "hidden_truth": {
+    "culprit": "blair",
+    "action": "stole_prototype",
+    "method": "stolen_badge",
+    "location": "lab",
+    "time": "18:22",
+    "motive": "sell_prototype"
+  },
+  "required_evidence": [
+    "reader_serial",
+    "crate_receipt",
+    "cam_courier",
+    "alibi_alex"
+  ],
+  "evaluation": {
+    "expected_status": "solved",
+    "solvable": true
+  },
+  "tools": {
+    "read_incident_report": {
+      "observation": "The prototype is missing. Alex, Blair and Casey were assigned to the building. The lab door is intact.",
+      "evidence": []
+    },
+    "check_access_log": {
+      "lab": {
+        "observation": "Alex's badge opened the lab at 18:22. No other badge opened it during the window.",
+        "evidence": [
+          {
+            "id": "badge_alex",
+            "description": "Alex's badge serial A17 opened the lab at 18:22.",
+            "independent_type": "access",
+            "source_group": "badge_log"
+          }
+        ]
+      }
+    },
+    "review_camera": {
+      "lab": {
+        "observation": "A face-obscured courier enters the lab with a crate at 18:22. The courier wears an orange sleeve with a triangular repair. Blair's delivery check-in at 18:10 records that same repair on their jacket.",
+        "evidence": [
+          {
+            "id": "cam_courier",
+            "description": "Blair's check-in jacket and the face-obscured lab courier's jacket have the same triangular sleeve repair.",
+            "independent_type": "camera"
+          }
+        ]
+      }
+    },
+    "inspect_location": {
+      "lab": {
+        "observation": "The prototype mount is empty and unbroken. A buyer's signed offer for the prototype is in the discarded delivery packing; it is addressed to Blair.",
+        "evidence": [
+          {
+            "id": "empty_mount",
+            "description": "The prototype mount is empty, with no breakage or replacement object.",
+            "independent_type": "scene"
+          },
+          {
+            "id": "buyer_offer",
+            "description": "A signed offer to pay Blair for the prototype was discarded with delivery packing.",
+            "independent_type": "document"
+          }
+        ]
+      }
+    },
+    "analyze_object": {
+      "badge_reader": {
+        "observation": "The reader records physical badge serial A17. The equipment-desk camera shows Blair taking A17 from Alex's unattended coat at 18:12 and returning it at 18:28.",
+        "evidence": [
+          {
+            "id": "reader_serial",
+            "description": "Badge A17 was taken from Alex's coat by Blair at 18:12, used in the lab at 18:22, and returned by Blair at 18:28.",
+            "independent_type": "object",
+            "source_group": "desk_camera"
+          }
+        ]
+      },
+      "delivery_crate": {
+        "observation": "A sealed crate in Blair's delivery trolley contains the missing prototype, matching the mount's serial number. A collection receipt signed Blair is timed 18:22.",
+        "evidence": [
+          {
+            "id": "crate_receipt",
+            "description": "The prototype's matching serial is inside Blair's sealed delivery crate; Blair signed its collection receipt at 18:22.",
+            "independent_type": "physical"
+          }
+        ]
+      }
+    },
+    "interview_character": {
+      "alex": {
+        "observation": "Alex says: 'I was in a live equipment demonstration all through the incident window. My coat was unattended.'",
+        "evidence": [
+          {
+            "id": "statement_alex",
+            "description": "Alex claims to have remained in a live demonstration.",
+            "independent_type": "statement"
+          }
+        ]
+      },
+      "blair": {
+        "observation": "Blair says: 'I did not enter the lab. The crate was empty when I collected it.'",
+        "evidence": [
+          {
+            "id": "statement_blair",
+            "description": "Blair denies entering the lab and says the collected crate was empty.",
+            "independent_type": "statement"
+          }
+        ]
+      },
+      "casey": {
+        "observation": "Casey says: 'I thought I saw Alex at the door because the badge display said Alex. I could not see the person's face.'",
+        "evidence": [
+          {
+            "id": "statement_casey",
+            "description": "Casey's identification of Alex came only from the badge display, not a visible face.",
+            "independent_type": "statement",
+            "source_group": "badge_log"
+          }
+        ]
+      }
+    },
+    "verify_alibi": {
+      "alex": {
+        "observation": "Independent live demonstration recording places Alex in the auditorium continuously from 18:05 to 18:35.",
+        "evidence": [
+          {
+            "id": "alibi_alex",
+            "description": "Alex is visible in the live demonstration continuously from 18:05 to 18:35.",
+            "independent_type": "alibi"
+          }
+        ]
+      },
+      "blair": {
+        "observation": "The loading-bay camera shows Blair returning with the sealed crate at 18:25.",
+        "evidence": [
+          {
+            "id": "alibi_blair",
+            "description": "Blair returns to the loading bay with the crate at 18:25.",
+            "independent_type": "camera",
+            "source_group": "loading_camera"
+          }
+        ]
+      },
+      "casey": {
+        "observation": "Reception video places Casey at the desk continuously during the window.",
+        "evidence": [
+          {
+            "id": "alibi_casey",
+            "description": "Casey remains at reception throughout the incident window.",
+            "independent_type": "alibi"
+          }
+        ]
+      }
+    },
+    "compare_testimonies": {
+      "alex|casey": {
+        "observation": "Casey confirms their identification relied only on the badge display; Alex says the coat holding that badge was unattended.",
+        "evidence": [
+          {
+            "id": "comparison_badge",
+            "description": "Casey's identification supplies no facial observation independent of the badge display.",
+            "independent_type": "statement",
+            "source_group": "badge_log"
+          }
+        ]
+      }
+    }
+  }
+}
