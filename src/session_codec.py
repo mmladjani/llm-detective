@@ -147,6 +147,8 @@ def load_session(payload: dict[str, Any], build_session) -> tuple[GameSession, C
 
     case = Case(payload["case_data"]) if payload.get("case_data") \
         else load_case(payload["case_id"])
+    if payload["state"].get("inference_mode", "authored") != case.inference_mode:
+        raise ValueError("This case's evidence rules have changed; start a new investigation.")
     session = build_session(case, payload["mode"], payload["policy"])
 
     session.state = InvestigationState.model_validate(payload["state"])

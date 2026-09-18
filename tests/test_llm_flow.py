@@ -1,4 +1,4 @@
-"""Regressions for the LLM path found in the September review and handoff.
+"""LLM-path regressions for conclusion review, inference and ordered events.
 
 Scripted clients verify protocol and state, not live model reasoning quality.
 """
@@ -71,7 +71,7 @@ def test_accepted_abstention_is_respected_even_with_a_high_numeric_lead():
 
 
 def test_report_and_rejected_hypotheses_follow_the_accepted_suspect():
-    """Handoff G: fields, summary and rejected list must all describe the same verdict."""
+    """Fields, summary and rejected list must all describe the same verdict."""
     s, _ = session()
     ready(s)
     assert s.state.ranked()[0].suspect == "mara"
@@ -92,7 +92,7 @@ def test_report_and_rejected_hypotheses_follow_the_accepted_suspect():
 
 @pytest.mark.parametrize("rationale", ["", "   ", None])
 def test_empty_assessment_rationale_is_rejected(rationale):
-    """Handoff I: an empty rationale cannot masquerade as an explained inference."""
+    """An empty rationale cannot masquerade as an explained inference."""
     s, _ = session()
     ready(s)
     entry = s.apply_assessment({"evidence_id": "cam_mara", "supports": "mara",
@@ -102,7 +102,7 @@ def test_empty_assessment_rationale_is_rejected(rationale):
 
 
 def test_model_facts_are_inferred_and_revisable_not_revealed():
-    """Handoff D: gathering a record must not silently fill the report's answers."""
+    """Gathering a record must not silently fill the report's answers."""
     s, _ = session()
     s.execute_decision(_llm_action("read_incident_report", {}))
     s.execute_decision(_llm_action("inspect_location", {"location": "archive_room"}))
@@ -209,7 +209,7 @@ def test_free_inferences_appear_before_the_next_world_action():
 
 
 def test_naive_baseline_has_scores_and_does_not_read_truth():
-    """Handoff H: compare on unlabelled cases, with no oracle or fake LLM provenance."""
+    """Compare on unlabelled cases, with no oracle or fake LLM provenance."""
     from eval.model_baseline import run_naive_model_baseline
     from eval.run_all import run_once_baseline
     for cid in ("case-011", "case-012", "case-013"):
@@ -333,13 +333,18 @@ def test_oracle_data_never_enters_native_or_reviewer_messages():
     assert "SECRET_" not in json.dumps(reviewer.messages.calls)
 
 
-def test_native_human_interview_survives_reload_and_only_sends_the_answer():
+@pytest.mark.parametrize("cid,witness,location,secret", [
+    ("case-008", "pike", "dispensary", "told_to_forget"),
+    ("case-009", "emma", "display_room", "you_do_not_want_this"),
+    ("case-010", "sarah", "archive_room", "you_feel_responsible"),
+])
+def test_native_human_interview_survives_reload_and_only_sends_the_answer(cid, witness, location, secret):
     """The real UI parks between HTTP requests; the native transcript must resume too."""
-    case = load_case("case-008")
+    case = load_case(cid)
     client = FakeClient([
         FakeResponse([ToolUseBlock("read_incident_report", {})]),
         FakeResponse([ToolUseBlock("interview_human", {
-            "suspect": "pike", "question": "What did you see?", "topic": "corridor"})]),
+            "suspect": witness, "question": "What did you see?", "topic": "observations"})]),
     ])
     inv = AgentInvestigator(case, client=client)
     s = GameSession(case, investigator=inv, requested_mode="llm")
@@ -352,7 +357,7 @@ def test_native_human_interview_survives_reload_and_only_sends_the_answer():
     assert "YOUR SECRETS" in s.pending_question()["role_card"]
     blob = dump_session(s, mode="llm", policy="demo", case_is_custom=False)
     resumed_client = FakeClient([FakeResponse([ToolUseBlock(
-        "check_access_log", {"location": "dispensary"})])])
+        "check_access_log", {"location": location})])])
 
     def rebuild(case, mode, policy):
         driver = AgentInvestigator(case, client=resumed_client)
@@ -361,19 +366,47 @@ def test_native_human_interview_survives_reload_and_only_sends_the_answer():
         return restored
 
     restored, _ = load_session(blob, rebuild)
-    restored.provide_human_answer("I saw Rhodes with a canvas holdall.")
+    restored.provide_human_answer("I do not want to answer that question.")
     assert restored.state.remaining_budget == before - 1
     assert len([a for a in restored.audit if a.tool == "interview_human"]) == 1
     restored.step()
     messages = json.dumps(resumed_client.messages.calls[0]["messages"], default=vars)
-    assert "I saw Rhodes with a canvas holdall." in messages
+    assert "I do not want to answer that question." in messages
     assert "YOUR SECRETS" not in messages
-    assert "told_to_forget" not in messages
+    assert secret not in messages
+    assert "consistency_score" not in messages
+    assert restored.state.inference_mode == "model"
 
 
 # Explicit reference routes, not an agent policy and not a live reasoning benchmark.
 # They prove the world + tool contract can yield every scored fact inside the budget.
 REFERENCE_CASES = [
+    ("case-008", "rhodes", "dispensary", [
+        ("analyze_object", {"object": "override_key"}),
+        ("analyze_object", {"object": "drug_register"}),
+    ], {"al_rhodes_override", "cam_rhodes", "obj_override", "loc_clinic_slip"}, {
+        "action": ("removed_controlled_drugs", "obj_register"),
+        "method": ("used_service_override", "obj_override"),
+        "motive": ("supply_private_clinic", "loc_clinic_slip"),
+        "time": ("03:20", "al_rhodes_override"),
+    }),
+    ("case-009", "davis", "display_room", [
+        ("analyze_object", {"object": "case_key"}),
+        ("analyze_object", {"object": "stock_record"}),
+    ], {"al_davis_alone", "cam_davis_key", "obj_key_davis", "loc_lender_letter"}, {
+        "action": ("removed_pendant", "obj_stock_gap"),
+        "method": ("used_display_key", "obj_key_davis"),
+        "motive": ("settle_gambling_debt", "loc_lender_letter"),
+        "time": ("11:45", "cam_davis_key"),
+    }),
+    ("case-010", "carmen", "archive_room", [
+        ("analyze_object", {"object": "damaged_records"}),
+    ], {"log_carmen_key", "cam_carmen_boxes", "obj_fragments_name", "obj_damage_deliberate"}, {
+        "action": ("destroyed_records", "obj_damage_deliberate"),
+        "method": ("discarded_in_bins", "bin_lid_record"),
+        "motive": ("hide_family_history", "obj_fragments_name"),
+        "time": ("18:00", "bin_lid_record"),
+    }),
     ("case-011", "mara", "archive_room", [
         ("analyze_object", {"object": "access_card"}),
         ("analyze_object", {"object": "manuscript_case"}),
@@ -406,10 +439,13 @@ REFERENCE_CASES = [
 ]
 
 
-@pytest.mark.parametrize("cid,culprit,location,extra,supports,facts", REFERENCE_CASES,
-                         ids=[c[0] for c in REFERENCE_CASES])
-def test_model_case_has_a_complete_legal_native_inference_path(cid, culprit, location, extra, supports, facts):
+@pytest.mark.parametrize("cid,culprit,location,extra,supports,facts,human_answer", [
+    (*case, answer) for case in REFERENCE_CASES
+    for answer in ([None, "I saw nothing at all."] if case[0] in {"case-008", "case-009", "case-010"} else [None])
+])
+def test_model_case_has_a_complete_legal_native_inference_path(cid, culprit, location, extra, supports, facts, human_answer):
     from src.tools import ToolBox
+    from src.human_responder import ScriptedResponder
     case = load_case(cid)
     script = []
 
@@ -421,6 +457,9 @@ def test_model_case_has_a_complete_legal_native_inference_path(cid, culprit, loc
             ("inspect_location", {"location": location}), *extra]
     for tool, args in path:
         call(tool, args)
+        if tool == "read_incident_report" and human_answer is not None:
+            witness = next(c["id"] for c in case.characters_full() if c.get("human_played"))
+            call("interview_human", {"suspect": witness, "question": "What did you see?"})
         for ev in ToolBox(case).call(tool, args)["evidence"]:
             accused = "alex" if ev.id == "badge_alex" else culprit
             call("assess_evidence", {"evidence_id": ev.id, "supports": accused,
@@ -441,7 +480,8 @@ def test_model_case_has_a_complete_legal_native_inference_path(cid, culprit, loc
     reviewer_client = FakeClient([FakeResponse([TextBlock('{"findings": []}')])])
     inv = AgentInvestigator(case, client=FakeClient(script),
                            conclusion_judge=make_llm_conclusion_judge(reviewer_client, "test"))
-    s = GameSession(case, investigator=inv, requested_mode="llm")
+    responder = ScriptedResponder([human_answer] if human_answer else [])
+    s = GameSession(case, investigator=inv, requested_mode="llm", responder=responder)
     inv.session = s
     s.run()
     assert s.state.status == "solved", [(e.tool, e.observation) for e in s.audit if not e.tool_ok]
@@ -452,6 +492,7 @@ def test_model_case_has_a_complete_legal_native_inference_path(cid, culprit, loc
     assert all(result["correct"].values()), result
     assert not result["missed_required_evidence"]
     assert reviewer_client.messages.calls
+    assert len(responder.asked) == (1 if human_answer is not None else 0)
     if cid == "case-013":
         gates = [e for e in s.events if e.get("phase") == "judge"]
         assert [e["passed"] for e in gates] == [False, True]

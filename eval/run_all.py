@@ -8,13 +8,12 @@ lesson of this app: evaluation honesty.
     python eval/run_all.py --runs 3                     # the live agent
     python eval/run_all.py --compare --runs 3           # both, side by side
 
-`--compare` is the mode that answers the question the repo previously only asserted:
-does driving this loop with a model actually beat the fixed deterministic policy? The
-rule-based baseline is a checklist — it needs no key and is fully reproducible — so
-any score it matches is a score that did NOT require reasoning. Publishing the two
-columns next to each other keeps "the LLM helps here" an measurement rather than a
-claim. Model-inference cases use a deliberately naive uniform/lexical baseline on
-the same unlabelled records; authored cases keep their original checklist policy.
+`--compare` evaluates both drivers on the same selected cases, not the different
+AI and Legacy case lists shown in the demo UI. Model-inference cases use a deliberately
+naive uniform/lexical baseline on the same unlabelled records; authored cases retain
+their checklist policy. Keep case version, public information, budget and evaluator
+fixed; control human answers when testing interactive cases. Results measure these
+policies on these cases, not LLM superiority over every deterministic approach.
 """
 
 from __future__ import annotations
@@ -33,6 +32,7 @@ from src.agent import iter_agent          # noqa: E402
 from src.evaluator import evaluate        # noqa: E402
 from src.cases import list_cases, load_case  # noqa: E402
 from src.loop import GameSession          # noqa: E402
+from src.human_responder import CLIResponder  # noqa: E402
 from src import history                   # noqa: E402
 from eval.model_baseline import run_naive_model_baseline  # noqa: E402
 
@@ -62,7 +62,7 @@ def run_once(case_id: str, save_history: bool = True) -> dict:
     t0 = time.time()
     cap: dict = {}
     final = None
-    for ev in iter_agent(case_id, _capture=cap):
+    for ev in iter_agent(case_id, _capture=cap, responder=CLIResponder()):
         if ev["type"] == "final":
             final = ev
     session = cap["session"]
@@ -124,9 +124,11 @@ def main():
     if args.runs < 1:
         ap.error("--runs must be at least 1")
 
+    # Batch runs must not unexpectedly wait for a human. Select an interactive
+    # case explicitly with --case; its questions then use the CLI responder.
     case_ids = [args.case] if args.case else [c["case_id"] for c in list_cases()
-                if c["inference"] == "model" or args.include_authored
-                or (args.mode == "rule_based" and not args.compare)]
+                if not c["human_played"] and (c["inference"] == "model"
+                or args.include_authored or (args.mode == "rule_based" and not args.compare))]
     run_llm = args.compare or args.mode == "llm"
     run_base = args.compare or args.mode == "rule_based"
 

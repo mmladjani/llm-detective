@@ -4,6 +4,13 @@
  "difficulty": "standard",
  "short_description": "A pendant left a locked display case in a jeweller's during opening hours. A customer who was browsing at the time is played by a real person — and she would rather not be the one who points a finger.",
  "budget": 10,
+ "inference": "model",
+ "fact_candidates": {
+  "action": ["replaced_pendant", "damaged_pendant", "removed_pendant"],
+  "method": ["forced_lock", "used_display_key", "borrowed_key"],
+  "motive": ["settle_gambling_debt", "claim_insurance", "hide_stock_error"],
+  "time": ["11:38", "11:45", "11:56"]
+ },
  "design_note": "HUMAN-AS-ACTOR CASE. Emma is played by a person, not the engine. Every id in required_evidence comes from the door log, the shop camera and the key fob audit, so the case stays winnable if the player stonewalls, lies or refuses — an uncooperative player must never be able to make the case unsolvable. Emma's value is that she can name the second person in the shop many actions before the camera would, which is a SHORTCUT, never a requirement. Nadia is the red herring: she has a grievance and no alibi worth much, but nothing that touches the case.",
  "incident_report": "A diamond pendant valued at about GBP 8,500 was removed from a locked display case at Frost & Co between 11:00 and 12:00 today. The case was not forced. Two people hold a display key: Marcus Frost (owner) and Davis (assistant jeweller). Nadia (part-time sales assistant) was on the floor for part of the morning. A customer, Emma, was browsing throughout the window and can be questioned in person. The gap was noticed at the midday stock check.",
  "index": {
@@ -95,31 +102,20 @@
     "evidence": [
      {
       "id": "al_davis_alone",
-      "supports": "davis",
-      "weight": 0.13,
-      "relates_to_incident": true,
+      "source_group": "staff_door_log",
       "independent_type": "access",
-      "reveals": {
-       "time": "11:45"
-      },
       "description": "From 11:38 to 11:56 Marcus was through in the office and Nadia was off site, leaving Davis the only keyholder in the display room."
      },
      {
       "id": "al_marcus_in_office",
-      "supports": "marcus",
-      "weight": -0.1,
-      "relates_to_incident": true,
+      "source_group": "staff_door_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "The staff door places Marcus through in the office from 11:38 to 11:56, away from the display case."
      },
      {
       "id": "al_nadia_off_site",
-      "supports": "nadia",
-      "weight": -0.1,
-      "relates_to_incident": true,
+      "source_group": "staff_door_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "Nadia passed out at 11:20 and did not return until 12:05, outside the window entirely."
      }
     ]
@@ -135,23 +131,14 @@
     "evidence": [
      {
       "id": "cam_davis_key",
-      "supports": "davis",
-      "weight": 0.15,
-      "relates_to_incident": true,
+      "source_group": "shop_camera",
       "independent_type": "camera",
-      "reveals": {
-       "action": "removed_pendant",
-       "method": "used_display_key"
-      },
       "description": "Camera shows Davis unlocking the display case with his own key at 11:45, removing an item and relocking it."
      },
      {
       "id": "cam_hooded_visitor",
-      "supports": "davis",
-      "weight": 0.04,
-      "relates_to_incident": true,
+      "source_group": "shop_camera",
       "independent_type": "camera",
-      "reveals": {},
       "description": "A hooded visitor was on the floor from 11:42 to 11:46, browsing nothing, and passed the counter as Davis relocked the case."
      }
     ]
@@ -163,36 +150,22 @@
   },
   "inspect_location": {
    "display_room": {
-    "observation": "The display case lock is unmarked — no scratching around the barrel, no lever damage. It was opened with its own key. The pendant's velvet slot is empty and the items either side of it have not been shifted. Under the counter, tucked into the back of Davis's own drawer, a lender's payment reminder addressed to him, face down and marked final.",
+    "observation": "The display case lock has no scratches around the barrel or lever damage. The pendant's velvet slot is empty and the items either side have not shifted. In Davis's drawer is a final payment demand addressed to him, identifying the outstanding sum as a gambling debt and requiring repayment today.",
     "evidence": [
      {
       "id": "loc_lock_unmarked",
-      "supports": "davis",
-      "weight": 0.06,
-      "relates_to_incident": true,
       "independent_type": "scene",
-      "reveals": {},
-      "description": "The lock is undamaged and the neighbouring items undisturbed — a keyholder who knew which piece to take, not an opportunist."
+      "description": "The display lock is undamaged, the pendant's slot is empty, and the neighbouring items are undisturbed."
      },
      {
       "id": "loc_lender_letter",
-      "supports": "davis",
-      "weight": 0.09,
-      "relates_to_incident": true,
       "independent_type": "scene",
-      "reveals": {
-       "motive": "settle_gambling_debt"
-      },
-      "description": "A final payment demand from a lender, addressed to Davis, was tucked into the back of his own drawer under the counter — he is being pressed for money."
+      "description": "A lender's final payment demand in Davis's drawer names his gambling debt and requires repayment today."
      },
      {
       "id": "loc_nadia_rota_note",
-      "supports": "nadia",
-      "weight": 0.03,
-      "relates_to_incident": false,
       "independent_type": "scene",
-      "reveals": {},
-      "description": "A rota sheet with Nadia's hours angrily crossed out was on the counter, but it dates from last week's shift dispute and has nothing to do with the pendant."
+      "description": "A rota sheet on the counter has Nadia's hours crossed out and is dated one week before the pendant disappeared."
      }
     ]
    },
@@ -207,13 +180,7 @@
     "evidence": [
      {
       "id": "obj_key_davis",
-      "supports": "davis",
-      "weight": 0.13,
-      "relates_to_incident": true,
       "independent_type": "object",
-      "reveals": {
-       "method": "used_display_key"
-      },
       "description": "The case barrel records key 2 turning the lock at 11:45 — the key signed out to Davis for the whole shift."
      }
     ]
@@ -223,11 +190,7 @@
     "evidence": [
      {
       "id": "obj_stock_gap",
-      "supports": "davis",
-      "weight": 0.07,
-      "relates_to_incident": true,
       "independent_type": "object",
-      "reveals": {},
       "description": "The pendant is logged in at 09:00 and missing at 12:00 with no sale, transfer or viewing recorded in between."
      }
     ]
@@ -239,15 +202,7 @@
     "evidence": [
      {
       "id": "int_davis",
-      "supports": "davis",
-      "weight": 0.0,
-      "relates_to_incident": true,
       "independent_type": "statement",
-      "reveals": {},
-      "raises_question": {
-       "suspect": "davis",
-       "note": "Davis says the case was never opened today. The barrel and the camera both say otherwise at 11:45. Verify."
-      },
       "description": "Davis claims he never opened the display case and was at the bench all morning."
      }
     ]
@@ -257,11 +212,8 @@
     "evidence": [
      {
       "id": "int_marcus",
-      "supports": "marcus",
-      "weight": 0.0,
-      "relates_to_incident": true,
+      "source_group": "marcus_statement",
       "independent_type": "statement",
-      "reveals": {},
       "description": "Marcus says he was on a supplier call in the office and observed nothing on the floor."
      }
     ]
@@ -271,11 +223,7 @@
     "evidence": [
      {
       "id": "int_nadia",
-      "supports": "nadia",
-      "weight": 0.0,
-      "relates_to_incident": false,
       "independent_type": "statement",
-      "reveals": {},
       "description": "Nadia says she was on her break off site; her complaint is about the rota, not the stock."
      }
     ]
@@ -287,12 +235,8 @@
     "evidence": [
      {
       "id": "ver_davis",
-      "supports": "davis",
-      "weight": 0.1,
-      "relates_to_incident": true,
+      "source_group": "shop_camera",
       "independent_type": "camera",
-      "reveals": {},
-      "resolves_question": "davis",
       "description": "Davis's claim never to have opened the case is contradicted by his own key in the barrel at 11:45 and by the floor camera."
      }
     ]
@@ -302,11 +246,8 @@
     "evidence": [
      {
       "id": "ver_marcus",
-      "supports": "marcus",
-      "weight": -0.08,
-      "relates_to_incident": true,
+      "source_group": "staff_door_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "The office reader and the supplier both corroborate Marcus's call across the window."
      }
     ]
@@ -316,11 +257,8 @@
     "evidence": [
      {
       "id": "ver_nadia",
-      "supports": "nadia",
-      "weight": -0.1,
-      "relates_to_incident": true,
+      "source_group": "staff_door_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "Nadia's badge-out and a timed card payment place her off site for the whole window."
      }
     ]
@@ -332,11 +270,8 @@
     "evidence": [
      {
       "id": "cmp_davis_marcus",
-      "supports": "davis",
-      "weight": 0.06,
-      "relates_to_incident": true,
+      "source_group": "marcus_statement",
       "independent_type": "statement",
-      "reveals": {},
       "description": "Marcus places the sound of the display case closing late in the window, against Davis's claim that it was never opened."
      }
     ]

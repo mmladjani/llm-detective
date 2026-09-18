@@ -4,6 +4,29 @@
  "difficulty": "standard",
  "short_description": "Controlled drugs left a locked hospital dispensary at 03:20. The only person awake on that corridor is played by a real person — and they have reasons of their own to be careful.",
  "budget": 11,
+ "inference": "model",
+ "fact_candidates": {
+  "action": [
+   "destroyed_controlled_drugs",
+   "removed_controlled_drugs",
+   "altered_drug_count"
+  ],
+  "method": [
+   "used_staff_badge",
+   "forced_lock",
+   "used_service_override"
+  ],
+  "motive": [
+   "hide_stock_error",
+   "supply_private_clinic",
+   "personal_use"
+  ],
+  "time": [
+   "03:15",
+   "03:20",
+   "03:29"
+  ]
+ },
  "design_note": "HUMAN-AS-ACTOR CASE. Pike is played by a person, not the engine. The case is deliberately solvable WITHOUT Pike: every id in required_evidence comes from the access log, the camera and the override key. A human player may stonewall, lie, or refuse to answer, and the agent must still be able to earn the conclusion — otherwise an uncooperative player would make the case unwinnable and the evaluator would punish the agent for someone else's choices. Pike's testimony is a SHORTCUT (it can point the agent at the override key many actions early), never a requirement.",
  "incident_report": "Between 03:00 and 03:40 last night, a quantity of controlled medication was removed from the locked dispensary on Ward 4. The door was not forced and no alarm sounded. Three staff were on the night rota with legitimate reason to be on that corridor: Rhodes (night pharmacist), Okonkwo (charge nurse) and Delaney (agency locum). Pike, the night porter, was working the corridor and can be questioned directly. The shortfall was found at the morning count.",
  "index": {
@@ -95,31 +118,20 @@
     "evidence": [
      {
       "id": "al_rhodes_override",
-      "supports": "rhodes",
-      "weight": 0.28,
-      "relates_to_incident": true,
+      "source_group": "dispensary_access",
       "independent_type": "access",
-      "reveals": {
-       "time": "03:20"
-      },
       "description": "The dispensary was opened at 03:20 with a service override — a credential only the duty pharmacist, Rhodes, holds."
      },
      {
       "id": "al_okonkwo_elsewhere",
-      "supports": "okonkwo",
-      "weight": -0.15,
-      "relates_to_incident": true,
+      "source_group": "staff_badge_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "Okonkwo's badge was on Ward 2 at 03:18 and never registered on Ward 4."
      },
      {
       "id": "al_delaney_elsewhere",
-      "supports": "delaney",
-      "weight": -0.12,
-      "relates_to_incident": true,
+      "source_group": "staff_badge_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "Delaney's badge stayed in the staff room from 02:50 onward."
      }
     ]
@@ -131,18 +143,13 @@
   },
   "review_camera": {
    "dispensary": {
-    "observation": "The corridor camera covering the dispensary door shows Rhodes entering at 03:19 empty-handed and leaving at 03:29 carrying a full canvas holdall. No one else approaches the door in the window.",
+    "observation": "The corridor camera shows Rhodes approaching the dispensary at 03:19 with a folded canvas holdall, entering when the lock releases at 03:20, and leaving at 03:29 with the holdall visibly full. No one else approaches the door in the window.",
     "evidence": [
      {
       "id": "cam_rhodes",
-      "supports": "rhodes",
-      "weight": 0.26,
-      "relates_to_incident": true,
+      "source_group": "dispensary_camera",
       "independent_type": "camera",
-      "reveals": {
-       "action": "removed_controlled_drugs"
-      },
-      "description": "Camera shows Rhodes entering the dispensary empty-handed at 03:19 and leaving at 03:29 with a full holdall."
+      "description": "Camera shows Rhodes enter at 03:20 with a folded canvas holdall and leave at 03:29 with it visibly full."
      }
     ]
    },
@@ -157,22 +164,12 @@
     "evidence": [
      {
       "id": "loc_clinic_slip",
-      "supports": "rhodes",
-      "weight": 0.12,
-      "relates_to_incident": true,
       "independent_type": "scene",
-      "reveals": {
-       "motive": "supply_private_clinic"
-      },
-      "description": "A torn dispensing slip for a private clinic address, with no matching entry in the ward register — the stock was being diverted."
+      "description": "A torn dispensing slip lists a private clinic address; the ward register has no matching entry."
      },
      {
       "id": "loc_delaney_mug",
-      "supports": "delaney",
-      "weight": 0.04,
-      "relates_to_incident": false,
       "independent_type": "scene",
-      "reveals": {},
       "description": "Delaney's mug was left on the dispensary counter, but the night sister confirms it had been there since the evening handover."
      }
     ]
@@ -188,13 +185,8 @@
     "evidence": [
      {
       "id": "obj_override",
-      "supports": "rhodes",
-      "weight": 0.22,
-      "relates_to_incident": true,
+      "source_group": "dispensary_access",
       "independent_type": "object",
-      "reveals": {
-       "method": "used_service_override"
-      },
       "description": "The override fob used at 03:20 was fob 04, signed out to Rhodes for the whole night shift."
      }
     ]
@@ -204,11 +196,7 @@
     "evidence": [
      {
       "id": "obj_register",
-      "supports": "rhodes",
-      "weight": 0.14,
-      "relates_to_incident": true,
       "independent_type": "object",
-      "reveals": {},
       "description": "Rhodes recorded no dispensing at 03:00, yet stock was gone by the morning count."
      }
     ]
@@ -220,15 +208,7 @@
     "evidence": [
      {
       "id": "int_rhodes",
-      "supports": "rhodes",
-      "weight": 0.0,
-      "relates_to_incident": true,
       "independent_type": "statement",
-      "reveals": {},
-      "raises_question": {
-       "suspect": "rhodes",
-       "note": "Rhodes says the dispensary was never opened — but the door logged an override at 03:20. Verify."
-      },
       "description": "Rhodes claims the dispensary was never opened during the night."
      }
     ]
@@ -238,11 +218,8 @@
     "evidence": [
      {
       "id": "int_okonkwo",
-      "supports": "okonkwo",
-      "weight": 0.0,
-      "relates_to_incident": true,
+      "source_group": "okonkwo_statement",
       "independent_type": "statement",
-      "reveals": {},
       "description": "Okonkwo says she was on Ward 2 for the whole period."
      }
     ]
@@ -252,11 +229,7 @@
     "evidence": [
      {
       "id": "int_delaney",
-      "supports": "delaney",
-      "weight": 0.0,
-      "relates_to_incident": false,
       "independent_type": "statement",
-      "reveals": {},
       "description": "Delaney says he was asleep in the staff room; his grievance is with the rota, not the ward."
      }
     ]
@@ -268,12 +241,8 @@
     "evidence": [
      {
       "id": "ver_rhodes",
-      "supports": "rhodes",
-      "weight": 0.2,
-      "relates_to_incident": true,
+      "source_group": "dispensary_access",
       "independent_type": "access",
-      "reveals": {},
-      "resolves_question": "rhodes",
       "description": "Rhodes's claim that the dispensary was never opened is contradicted by the 03:20 override on their own fob."
      }
     ]
@@ -283,11 +252,8 @@
     "evidence": [
      {
       "id": "ver_okonkwo",
-      "supports": "okonkwo",
-      "weight": -0.1,
-      "relates_to_incident": true,
+      "source_group": "staff_badge_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "Okonkwo's badge trail on Ward 2 corroborates her account."
      }
     ]
@@ -297,11 +263,8 @@
     "evidence": [
      {
       "id": "ver_delaney",
-      "supports": "delaney",
-      "weight": -0.1,
-      "relates_to_incident": true,
+      "source_group": "staff_badge_log",
       "independent_type": "access",
-      "reveals": {},
       "description": "The staff room door logged no exit for Delaney across the window."
      }
     ]
@@ -313,11 +276,8 @@
     "evidence": [
      {
       "id": "cmp_rhodes_okonkwo",
-      "supports": "rhodes",
-      "weight": 0.1,
-      "relates_to_incident": true,
+      "source_group": "okonkwo_statement",
       "independent_type": "statement",
-      "reveals": {},
       "description": "Okonkwo places a light on in the dispensary at about 03:20, against Rhodes's claim that it was never opened."
      }
     ]

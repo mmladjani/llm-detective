@@ -29,6 +29,12 @@ METHOD_DEFINITIONS = {
     "remote_login": "Access to the system over a remote connection using a login.",
     "usb_drive": "Data transferred using a USB storage device.",
     "printed_records": "Data taken in the form of printed records.",
+    "used_staff_badge": "Entry using a normal staff badge credential.",
+    "used_service_override": "Entry using a service override credential rather than a normal staff badge.",
+    "used_display_key": "Opening a display case with a display key. Does not assert who owns the key.",
+    "discarded_in_bins": "Records placed in waste bins. Destruction and the identity of the person require separate evidence.",
+    "burned_records": "Records destroyed by fire.",
+    "removed_in_vehicle": "Records carried away in a vehicle.",
 }
 
 

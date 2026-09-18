@@ -13,7 +13,7 @@ def test_list_cases():
     r = client.get("/api/cases")
     assert r.status_code == 200
     # case-001..013: the hand-written corpus, including the three human-as-actor cases
-    # (008/009/010) and unlabelled-inference cases (011–013). Generated cases are
+    # (008/009/010). All cases 008–013 use model inference. Generated cases are
     # deliberately excluded from this listing.
     cases = r.json()["cases"]
     assert len(cases) == 13
@@ -22,6 +22,8 @@ def test_list_cases():
     by_id = {c["case_id"]: c for c in cases}
     assert by_id["case-001"]["inference"] == "authored"
     assert by_id["case-011"]["inference"] == "model"
+    assert {c["case_id"] for c in cases if c["inference"] == "model"} == {
+        f"case-{i:03}" for i in range(8, 14)}
     assert {c["case_id"] for c in cases if c["human_played"]} == {
         "case-008", "case-009", "case-010"}
     assert "knowledge" not in r.text
@@ -68,9 +70,8 @@ def test_reset_endpoint_clears_all_prior_data():
 
 
 def test_evaluation_includes_run_metadata():
-    # Pin the mode explicitly: with an ANTHROPIC_API_KEY present in the environment the
-    # default ("") auto-resolves to "llm", which would make this a slow, live LLM run
-    # and break the rule_based assertion below. The test's intent is run_metadata shape.
+    # Pin the offline mode: an omitted/empty mode always resolves to llm, even without
+    # a key. This test checks run_metadata shape and must never make a live call.
     sid = client.post("/api/sessions",
                       json={"case_id": "case-001", "mode": "rule_based"}).json()["session_id"]
     client.post(f"/api/sessions/{sid}/run")
@@ -111,7 +112,7 @@ def test_full_interview_round_trip_through_the_api(monkeypatch):
     """Park on a question, answer it from the client, and see the run resume.
 
     This is the whole feature end to end: the answer enters through /answer and
-    nowhere else, and the same person's second answer is checked against the first.
+    nowhere else. Model cases receive the answers without a scripted interpretation.
     """
     import app as app_mod
     from src.investigator import Decision, Investigator, NextAction
@@ -189,8 +190,11 @@ def test_full_interview_round_trip_through_the_api(monkeypatch):
                           json={"answer": "Actually it was after four."}).json()
 
     obs = shifted["latest"]["observation"]
-    assert "conflicts with what" in obs           # the agent is told the story moved
-    assert "likely_lying" not in obs              # but never handed the verdict
+    assert obs == 'Pike answers: "Actually it was after four."'
+    assert "likely_lying" not in obs
+    transcript = [o["observation"] for o in shifted["state"]["observations"]]
+    assert any("About quarter past three." in o for o in transcript)
+    assert any("Actually it was after four." in o for o in transcript)
 
 
 def test_answer_requires_non_empty_text(monkeypatch):

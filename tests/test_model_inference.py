@@ -67,10 +67,11 @@ def test_unlabelled_case_declares_its_mode():
     assert load_case("case-011").public_briefing()["inference"] == "model"
 
 
-def test_case_file_carries_no_authored_inference():
+@pytest.mark.parametrize("case_id", [f"case-{i:03}" for i in range(8, 14)])
+def test_case_file_carries_no_authored_inference(case_id):
     """The file itself is clean — not merely masked at runtime."""
     path = next(p for p in list_case_files()
-                if json.loads(p.read_text())["case_id"] == "case-011")
+                if json.loads(p.read_text())["case_id"] == case_id)
     data = json.loads(path.read_text())
 
     def walk(node):
@@ -79,6 +80,8 @@ def test_case_file_carries_no_authored_inference():
                 if isinstance(item, dict):
                     assert "supports" not in item, item
                     assert "weight" not in item, item
+                    assert "reveals" not in item, item
+                    assert "relates_to_incident" not in item, item
             for v in node.values():
                 walk(v)
         elif isinstance(node, list):
