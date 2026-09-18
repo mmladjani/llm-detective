@@ -257,31 +257,25 @@ HUMAN_IDS = [c["case_id"] for c in HUMAN_CASES]
 
 
 @pytest.mark.parametrize("data", HUMAN_CASES, ids=HUMAN_IDS)
-def test_human_case_is_solvable_when_the_player_refuses(data):
-    """The central promise of a human-as-actor case.
+def test_human_cases_require_model_interpretation(data):
+    """Collection alone must no longer solve a human case through preset weights.
 
-    A person playing a character may stonewall, lie, or refuse outright. If that
-    could cost the agent the case, the evaluator would be punishing the agent for
-    someone else's choice. So the deterministic baseline must still reach the right
-    culprit with every required id, using an answer that gives it nothing.
+    Complete reference routes, with and without a refusing human, are exercised
+    through the native agent in test_llm_flow.py. This pins the data boundary.
     """
-    from src.evaluator import evaluate
-    from src.human_responder import ScriptedResponder
-    from src.investigator import RuleBasedInvestigator
+    from src.investigator import Decision, NextAction
     from src.loop import GameSession
+    from src.state import BASE_PRIOR
 
     case = Case(data)
-    session = GameSession(case, requested_mode="rule_based",
-                          responder=ScriptedResponder(["I saw nothing at all."] * 40))
-    session.investigator = RuleBasedInvestigator(session.toolbox)
-    session.run()
-
-    report = session.state.final_report
-    result = evaluate(case, session.state, session.run_metadata())
-
-    assert session.state.status == data["evaluation"]["expected_status"]
-    assert report is not None and report.culprit == data["hidden_truth"]["culprit"]
-    assert not result["missed_required_evidence"]
-    unpinned = [f for f in ("action", "method", "time", "motive")
-                if f in data["hidden_truth"] and getattr(report, f, None) is None]
-    assert not unpinned, f"an uncooperative player left these unestablished: {unpinned}"
+    assert case.inference_mode == "model"
+    session = GameSession(case, requested_mode="llm")
+    for tool, args in [("read_incident_report", {}),
+                       ("check_access_log", {"location": case.index["location"]})]:
+        session.execute_decision(Decision(
+            action=NextAction("unspecified", "Collect a record", tool, args),
+            source="llm", llm_called=True, validation_status="ok"))
+    assert session.unassessed_evidence()
+    assert {h.confidence for h in session.state.hypotheses} == {BASE_PRIOR}
+    assert not session.state.fact_assertions
+    assert not ({"action", "method", "time", "motive"} & session.state.facts_revealed.keys())

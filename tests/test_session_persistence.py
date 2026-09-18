@@ -160,6 +160,16 @@ def test_corrupt_stored_value_is_a_miss(monkeypatch):
 
 
 # --- the codec -----------------------------------------------------------------
+@pytest.mark.parametrize("cid", ["case-008", "case-009", "case-010"])
+def test_pre_conversion_human_sessions_require_a_restart(cid):
+    case = load_case(cid)
+    s = GameSession(case, requested_mode="llm")
+    blob = session_codec.dump_session(s, mode="llm", policy="demo", case_is_custom=False)
+    blob["state"]["inference_mode"] = "authored"
+    with pytest.raises(ValueError, match="evidence rules have changed"):
+        session_codec.load_session(blob, _offline_build)
+
+
 def test_engine_state_and_audit_survive():
     s = GameSession(load_case("case-001"), requested_mode="rule_based")
     s.run()

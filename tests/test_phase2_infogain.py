@@ -1,4 +1,4 @@
-"""Phase 2: info-gain metric (quality of move selection) + skill registration.
+"""Info-gain metric (quality of move selection) + skill registration.
 Offline — a fabricated trace + one real rule_based run, no key."""
 
 from __future__ import annotations

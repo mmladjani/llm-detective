@@ -76,7 +76,7 @@ INCIDENTS: dict[str, dict[str, Any]] = {
 
 TWISTS = ["none", "lying_witness", "insufficient"]
 
-# Phase 1: neutral "decoy" objects at the scene — they carry no evidence, they only widen the action space
+# Neutral "decoy" objects at the scene — they carry no evidence, they only widen the action space
 # (analyze_object). A brute-force baseline can waste steps on them; a smart agent skips them.
 DECOY_OBJECTS = ["ventilation_grate", "waste_bin", "supply_cabinet", "light_fixture"]
 MAX_DECOY_OBJECTS = 4
@@ -91,7 +91,7 @@ def builder_options() -> dict[str, Any]:
         "twists": TWISTS,
         "budget": {"min": 6, "max": 14, "default": 11},
         "suspects": {"min": 3, "max": MAX_SUSPECTS},
-        # Phase 1 — levers of world complexity:
+        # World-complexity options:
         "num_red_herrings": {"min": 0, "max": 3, "default": 1},
         "decoy_objects": {"min": 0, "max": MAX_DECOY_OBJECTS, "default": 0},
         "multi_day": {"default": False,
@@ -138,7 +138,7 @@ def validate_recipe(recipe: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("budget must be 6-14")
     loc = _slug(str(r.get("location") or LOCATIONS[0][0]))
 
-    # Phase 1: number of red herrings. Inherit the old bool if not given explicitly.
+    # Number of red herrings. Inherit the old bool if not given explicitly.
     # Herrings are taken from the INNOCENTS (except the one whose alibi is used to resolve),
     # so there are at most len(innocents) - 1 of them.
     max_herrings = max(0, len(names) - 2)
@@ -174,7 +174,7 @@ def build_case(recipe: dict[str, Any], case_id: str | None = None) -> Case:
     culprit = rng.choice(ids) if r["culprit"] == "random" else _slug(r["culprit"])
     innocents = [i for i in ids if i != culprit]
     liar = innocents[0] if r["twist"] == "lying_witness" else None
-    # Phase 1: the set of red herrings. innocents[0] is reserved (its alibi resolves the case),
+    # The set of red herrings. innocents[0] is reserved (its alibi resolves the case),
     # so herrings are picked from the END of the innocents list. Works for 0 and for several.
     num_herrings = min(int(r.get("num_red_herrings", 1 if r["red_herring"] else 0)),
                        max(0, len(innocents) - 1))
@@ -191,7 +191,7 @@ def build_case(recipe: dict[str, Any], case_id: str | None = None) -> Case:
     obj_method, obj_scene = spec["objects"]
     insufficient = r["twist"] == "insufficient"
 
-    # Phase 2 — "deep" case: physical evidence is DELIBERATELY weak (does not cross the threshold early), so
+    # A "deep" case: physical evidence is DELIBERATELY weak (does not cross the threshold early), so
     # the deciding link becomes a broken alibi — which a fixed order only reaches after
     # interviews (many steps). build_and_verify still guarantees solvability within budget;
     # unsolvable combinations (culprit interviewed too late) are rejected. An info-gain agent would
@@ -312,7 +312,7 @@ def build_case(recipe: dict[str, Any], case_id: str | None = None) -> Case:
                             f"match {by_id[culprit]}.",
                             reveals={"action": spec["action"]})]}
 
-    # ---- Phase 1: neutral decoy objects (widen the action space, carry no evidence) ---
+    # ---- Neutral decoy objects (widen the action space, carry no evidence) ---
     decoy_names = DECOY_OBJECTS[: r.get("decoy_objects", 0)]
     for dname in decoy_names:
         tools["analyze_object"][dname] = {

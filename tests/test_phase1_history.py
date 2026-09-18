@@ -1,4 +1,4 @@
-"""Phase 0/1 additions: the expanded generator (more suspects, herrings, decoy objects),
+"""The expanded generator (more suspects, herrings, decoy objects),
 the history store (round-trip), and metrics (agent-vs-baseline gap). All offline, no key."""
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from eval import metrics
 NAMES8 = ["Mara", "Idris", "Lena", "Tomas", "Sara", "Petar", "Nina", "Goran"]
 
 
-# ---------------- Phase 1: generator ----------------
+# ---------------- Generator ----------------
 def test_recipe_allows_up_to_eight_suspects():
     r = validate_recipe({"incident_type": "theft", "suspects": NAMES8, "culprit": "random"})
     assert len(r["suspects"]) == 8
@@ -51,7 +51,7 @@ def test_more_suspects_grows_action_space():
                         "budget": 11, "seed": 1})
     big = build_case({"incident_type": "theft", "suspects": NAMES8[:8], "twist": "none",
                       "num_red_herrings": 3, "decoy_objects": 4, "budget": 14, "seed": 2})
-    assert space(big) >= 2 * space(small)   # Phase 1 goal: ≥ 2× action space
+    assert space(big) >= 2 * space(small)   # At least twice the action space
 
 
 # ---------------- history store ----------------

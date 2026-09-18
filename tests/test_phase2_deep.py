@@ -1,4 +1,4 @@
-"""Phase 2 — 'deep' cases: physical evidence is weak, the deciding link is a broken
+"""Generated deep cases: physical evidence is weak, the deciding link is a broken
 alibi, so the fixed (brute-force) baseline spends SIGNIFICANTLY more steps than on shallow ones — and
 build_and_verify still guarantees solvability. This is where an info-gain agent has something
 to beat. Offline, no key."""
@@ -35,7 +35,7 @@ def test_deep_case_still_self_checks_and_is_solved():
 
 
 def test_deep_costs_more_steps_than_shallow_for_baseline():
-    """The point of Phase 2: on deep cases a fixed order is INEFFICIENT."""
+    """A fixed order uses more actions on these deep cases."""
     shallow, deep = [], []
     for seed in range(30):
         try:

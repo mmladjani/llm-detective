@@ -24,7 +24,14 @@
   #casePreview{margin-top:10px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
   #casePreview p{margin:6px 0;color:var(--dim);font-size:13px}
   #start{width:100%;padding:12px}
-  #runHelp{font-size:12px;margin:8px 0}
+  .activity{display:flex;gap:10px;align-items:flex-start;margin:10px 0}
+  .activity.working{position:fixed;right:16px;bottom:16px;z-index:20;width:min(360px,calc(100vw - 32px));margin:0;padding:12px 14px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;box-shadow:0 4px 20px #0006}
+  #runHelp,#workElapsed{font-size:12px}
+  #workElapsed{margin-top:4px;color:var(--dim)}
+  .spinner{flex:0 0 auto;width:18px;height:18px;margin-top:2px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  .spinner[hidden]{display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
   :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:0 0 8px}
   .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--dim);margin-top:6px}
@@ -87,20 +94,26 @@
   <div class="left">
     <h2 class="setup-title" style="text-transform:none;letter-spacing:0;color:var(--ink)">Start an investigation</h2>
     <p class="muted" style="margin:0">Choose a mystery and watch the agent investigate. No detective experience needed.</p>
-    <label class="setup-step" for="caseSelect">1. Choose a case</label>
-    <select id="caseSelect" aria-describedby="casePreview"><option>Loading cases…</option></select>
-    <div id="casePreview" aria-live="polite"></div>
-    <label class="setup-step" for="mode">2. Choose the investigator</label>
-    <select id="mode">
-      <option value="llm">LLM-driven agent — recommended</option>
-      <option value="rule_based">Deterministic baseline — comparison only</option>
+    <label class="setup-step" for="mode">1. Choose the investigator</label>
+    <select id="mode" aria-describedby="modeNote">
+      <option value="llm">AI detective — recommended</option>
+      <option value="rule_based">Legacy — deterministic demo</option>
     </select>
     <div id="modeNote" class="muted" style="font-size:12px;margin-top:6px"></div>
     <div id="keyNotice" role="status" style="color:var(--warn)"></div>
+    <label class="setup-step" for="caseSelect">2. Choose a case</label>
+    <select id="caseSelect" aria-describedby="casePreview"><option>Loading cases…</option></select>
+    <div id="casePreview" aria-live="polite"></div>
     <div id="llmOpts" style="display:none"><select id="policy"><option value="demo">Demo</option><option value="evaluation">Evaluation</option></select></div>
     <div class="setup-step">3. Start and follow the evidence</div>
     <button id="start" disabled>Start investigation</button>
-    <div id="runHelp" class="muted" role="status">The agent chooses its tools. Pause to inspect a turn, or continue automatically.</div>
+    <div id="workActivity" class="activity">
+      <span id="workSpinner" class="spinner" aria-hidden="true" hidden></span>
+      <div>
+        <div id="runHelp" class="muted" role="status">The agent chooses its tools. Pause to inspect a turn, or continue automatically.</div>
+        <div id="workElapsed" aria-hidden="true" hidden></div>
+      </div>
+    </div>
     <div class="controls">
       <button id="step" class="ghost" disabled>Next turn</button>
       <button id="run" class="ghost" disabled>Continue automatically</button>
@@ -110,8 +123,8 @@
     <div id="err" role="alert" style="color:var(--bad)"></div>
     <a class="link" href="/board">Open board view ↗</a>
 
-    <details class="fold" id="builderFold">
-    <summary>Custom case builder <span class="hint">advanced · authored</span></summary>
+    <details class="fold" id="builderFold" hidden>
+    <summary>Legacy case builder <span class="hint">advanced</span></summary>
     <div class="foldbody">
     <div id="builder" style="font-size:13px">
       <textarea id="b_desc" aria-label="Scenario description" rows="2" style="width:100%" placeholder="Describe a scenario (optional — requires an API key)…"></textarea>
@@ -142,7 +155,8 @@
     <!-- Shown only while the run is parked on a question for a human-played
          character. This is the ONLY route by which an answer enters a run. -->
     <div class="panel" id="interviewPanel" style="display:none;border-color:var(--warn)">
-      <h2 style="color:var(--warn)">🎭 You are being questioned</h2>
+      <h2 style="color:var(--warn)">Your turn — answer the detective</h2>
+      <p class="muted">The investigation is paused. Read your private role card, then answer in character. The detective sees only what you submit.</p>
       <div id="roleCard" class="mono"
            style="white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line);
                   border-radius:6px;padding:10px;font-size:12px;max-height:230px;overflow:auto"></div>
@@ -226,17 +240,33 @@
 <script>
 const $ = s => document.querySelector(s);
 let CASES = [], selected = null, sid = null, view = null, renderedEvents = 0, requestBusy = false;
+let activityTimer = null, activityStartedAt = 0, requestKind = '';
+
+function syncActivity(active){
+  $('#workActivity').classList.toggle('working', active);
+  $('#workSpinner').hidden = !active;
+  $('#workElapsed').hidden = !active;
+  if(active && activityTimer === null){
+    activityStartedAt = Date.now();
+    const tick = ()=>{ $('#workElapsed').textContent = Math.floor((Date.now()-activityStartedAt)/1000)+'s elapsed · no need to refresh'; };
+    tick();
+    activityTimer = setInterval(tick, 1000);
+  }else if(!active && activityTimer !== null){
+    clearInterval(activityTimer);
+    activityTimer = null;
+  }
+}
 
 async function api(path, opts){
   const mutating = opts?.method === 'POST' && path.startsWith('/api/sessions');
   if(mutating && requestBusy) throw new Error('A turn is still running. Please wait.');
-  if(mutating){ requestBusy = true; syncControls(); }
+  if(mutating){ requestBusy = true; requestKind = path.split('/').pop(); syncControls(); }
   try{
   const r = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
   const body = await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(body.detail || ('HTTP '+r.status));
   return body;
-  }finally{ if(mutating){ requestBusy = false; syncControls(); } }
+  }finally{ if(mutating){ requestBusy = false; requestKind = ''; syncControls(); } }
 }
 function syncControls(){
   const canStep = !!sid && view?.state.status === 'investigating';
@@ -247,59 +277,70 @@ function syncControls(){
   $('#caseSelect').disabled = requestBusy || autoRunning;
   $('#mode').disabled = requestBusy || autoRunning;
   $('#start').textContent = sid ? 'Start a new investigation' : 'Start investigation';
-  $('#runHelp').textContent = requestBusy ? 'The agent is working. A turn may include several model calls.' :
+  const llm = (view?.run_metadata?.requested_mode || $('#mode').value)==='llm';
+  const working = requestBusy || (autoRunning && canStep && !view?.awaiting_human);
+  syncActivity(working);
+  const help = requestBusy ? (
+    requestKind==='sessions' ? 'Starting investigation…' :
+    requestKind==='reset' ? 'Restarting investigation…' :
+    requestKind==='answer' ? 'Sending your answer…' :
+    llm ? 'Waiting for the AI… A turn may include investigation and judge review. This can take a while.' :
+    'Running the next legacy step…') :
     view?.awaiting_human ? 'Your turn: read your role card below and answer the detective.' :
-    autoRunning ? 'Running automatically. Pause finishes the current turn, then waits.' :
     sid && view?.state.status!=='investigating' ? 'Investigation finished. Review the report and reveal the score, or start a new case.' :
-    sid ? 'Use Next turn to inspect each decision, or Continue automatically.' :
-    'The agent chooses its tools. Pause to inspect a turn, or continue automatically.';
+    autoRunning ? 'Running automatically. Pause finishes the current turn, then waits.' :
+    sid ? 'Investigation paused. Use Next turn or Continue automatically.' :
+    $('#mode').value==='rule_based' ? 'The legacy script follows fixed rules. Pause to inspect a turn.' :
+    'The AI chooses its tools. Pause to inspect a turn, or continue automatically.';
+  if($('#runHelp').textContent!==help) $('#runHelp').textContent = help;
 }
 function err(msg){ $('#err').textContent = msg || ''; }
 
 async function loadCases(){
   const {cases} = await api('/api/cases');
-  cases.sort((a,b)=>(b.inference==='model')-(a.inference==='model'));
   CASES = cases;
+  renderCaseOptions();
+}
+function caseTitle(c){ return c.title.replace(/ \((?:unlabelled|model inference)\)$/i, ''); }
+function renderCaseOptions(){
+  const legacy = $('#mode').value === 'rule_based';
+  const cases = CASES.filter(c=>legacy ? c.inference!=='model' : c.inference==='model')
+    .sort((a,b)=>Number(a.human_played)-Number(b.human_played) || a.case_id.localeCompare(b.case_id));
   const box = $('#caseSelect'); box.innerHTML='';
-  const groups = [
-    ['LLM-driven mysteries — recommended', c=>c.inference==='model'],
-    ['Human-in-the-loop — you play a witness', c=>c.human_played && c.inference!=='model'],
-    ['Authored comparison cases', c=>!c.human_played && c.inference!=='model']
-  ];
-  for(const [label, match] of groups){
-    const group=document.createElement('optgroup'); group.label=label;
-    cases.filter(match).forEach(c=>group.appendChild(new Option(c.case_id.replace('case-','')+' · '+c.title,c.case_id)));
-    if(group.children.length) box.appendChild(group);
-  }
-  selectCase(cases.find(c=>c.case_id===selected)?.case_id || cases.find(c=>c.inference==='model')?.case_id || cases[0]?.case_id);
+  cases.forEach(c=>box.appendChild(new Option(
+    c.case_id.replace('case-','')+' · '+caseTitle(c)+(c.human_played?' — You play a witness':''), c.case_id)));
+  $('#builderFold').hidden = !legacy;
+  if(!legacy) $('#builderFold').open = false;
+  selectCase(cases.find(c=>c.case_id===selected)?.case_id || cases[0]?.case_id);
 }
 function selectCase(id){
   selected = id;
   $('#caseSelect').value=id || '';
   const c=CASES.find(c=>c.case_id===id);
-  $('#casePreview').innerHTML=c ? `<b>${escapeHtml(c.title)}</b><p>${escapeHtml(c.short_description)}</p>
+  $('#casePreview').innerHTML=c ? `<b>${escapeHtml(caseTitle(c))}</b><p>${escapeHtml(c.short_description)}</p>
     <span class="badge">${escapeHtml(c.difficulty)}</span> <span class="badge">${c.budget} world actions</span>
-    <p>${c.human_played ? 'You play a witness. When the agent asks a question, your private role card and answer box appear below. These legacy cases use authored evidence weights.' : c.inference==='model' ? 'The model chooses tools, weighs evidence and infers the solution. The judge reviews its conclusion.' : 'Comparison case: evidence weights are authored, even when an LLM chooses the tools.'}</p>` : 'No cases available.';
+    <p>${c.human_played ? '<b>You play a witness.</b> The AI may ask you questions. If it does, the investigation pauses and your private role card and answer box appear here. It may also investigate other records without questioning you.' : c.inference==='model' ? '<b>Watch the investigation.</b> The AI chooses tools, interprets evidence and submits a conclusion for review. You do not need to type answers.' : 'A historical example with fixed rules and preassigned evidence weights. No LLM runs the investigation.'}</p>` : 'No cases available.';
   syncControls();
 }
 $('#caseSelect').onchange=e=>selectCase(e.target.value);
 
 function updateModeNote(){
   const m = $('#mode').value;
+  $('#keyNotice').hidden = m!=='llm';
   $('#modeNote').innerHTML = m==='llm'
-    ? 'The model chooses each action. A structural check and an independent LLM review assess its conclusion.'
-    : 'A fixed script, not an LLM. Use authored cases to compare it with the model-driven flow.';
+    ? 'The LLM chooses its next action and interprets the evidence. A separate LLM reviewer checks its conclusion.'
+    : 'These earlier cases were used to explore differences between a fixed-rule approach and an LLM-driven loop. Retained as legacy examples, not a side-by-side comparison.';
   // The schema-driver policy is not part of the native UI flow.
   $('#llmOpts').style.display = 'none';
 }
-$('#mode').onchange = updateModeNote;
+$('#mode').onchange = ()=>{ updateModeNote(); renderCaseOptions(); };
 // Keep LLM as the default; explain missing credentials without silently switching modes.
 (async ()=>{
   try{
     const cfg = await api('/api/config');
     if(!cfg.has_api_key){
       const opt = [...$('#mode').options].find(o=>o.value==='llm');
-      if(opt) opt.textContent = 'LLM agent (requires ANTHROPIC_API_KEY)';
+      if(opt) opt.textContent = 'AI detective — API key required';
       $('#keyNotice').textContent='LLM mode needs ANTHROPIC_API_KEY on the server.';
     }
   }catch(e){}
@@ -368,7 +409,7 @@ async function start(){
     if(body.mode==='llm'){ body.policy = $('#policy').value; }
     view = await api('/api/sessions', {method:'POST', body:JSON.stringify(body)});
     sid = view.session_id;
-    $('#activeCase').textContent = view.briefing.title;
+    $('#activeCase').textContent = caseTitle(view.briefing);
     $('#briefingPanel').style.display='block';
     $('#briefing').textContent = view.briefing.incident_report;
     $('#reportPanel').style.display='none';
@@ -436,7 +477,10 @@ async function run(){
   autoStep();
 }
 
-function stop(){ setRunning(false); }
+function stop(){
+  setRunning(false);
+  if(requestBusy) $('#runHelp').textContent = 'Pausing after the current turn… Please wait for its result.';
+}
 // The run is parked until a person answers. Nothing else can supply this text —
 // the agent has no parameter for it.
 async function sendAnswer(){

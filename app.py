@@ -462,7 +462,7 @@ def run_cli(case_id: str):
         if t == "final":
             last_final = ev
         if t == "input":
-            print(f"{C.BOLD}ULAZ: {json.dumps(ev['data']['briefing'], indent=2)[:400]}…{C.RESET}")
+            print(f"{C.BOLD}INPUT: {json.dumps(ev['data']['briefing'], indent=2)[:400]}…{C.RESET}")
         elif t == "think":
             print(f"{C.BLUE}🧠 THINK:{C.RESET} {ev['text']}")
         elif t == "tool" and ev.get("name") == "get_skill":
@@ -485,14 +485,14 @@ def run_cli(case_id: str):
             elif ev["phase"] == "revise":
                 print(f"{C.YELLOW}↻ REVISE: critique returned to the agent…{C.RESET}")
         elif t == "final":
-            print(f"\n{C.MAGENTA}{'─' * 70}\nKRAJ ({ev['reason']}): {ev['text']}{C.RESET}")
+            print(f"\n{C.MAGENTA}{'─' * 70}\nEND ({ev['reason']}): {ev['text']}{C.RESET}")
             u = ev["usage"]
             print(f"{C.CYAN}📊 USAGE:{C.RESET} {u['llm_calls']} LLM calls, "
-                  f"{u['input_tokens']} in / {u['output_tokens']} out tokena")
+                  f"{u['input_tokens']} in / {u['output_tokens']} out tokens")
             md = ev["structured"]["run_metadata"]
             print(f"{C.CYAN}🔎 PROVENANCE:{C.RESET} fully_llm_driven={md['fully_llm_driven']} "
                   f"llm={md['llm_decisions']} fallback={md['fallback_decisions']}")
-    # Out-of-band evaluacija naspram skrivene istine:
+    # Out-of-band evaluation against hidden truth:
     session = cap["session"]
     ev = evaluate(cap["case"], session.state, session.run_metadata())
     print(f"{C.CYAN}🏁 EVALUATOR:{C.RESET} score={ev['total_score']} "

@@ -1,15 +1,15 @@
 """The tool layer.
 
-This is the *only* channel through which the investigator learns anything about the
-case. Each tool:
+World tools expose case observations after the public briefing. Each scripted tool:
   * validates its arguments,
   * looks up a deterministic response from the case definition,
   * returns structured JSON (observation + evidence),
   * records a cost of 1,
   * never returns the hidden truth, required-evidence list, or evaluator metadata.
 
-Because responses are looked up (not generated), the same (case, tool, args) always
-yields the same result.
+Scripted observations are fixed for a given case and target. `interview_human` is
+the exception: a person supplies each answer, and the session can pause to await it.
+In model mode, answers carry no automatic truthfulness or contradiction labels.
 """
 
 from __future__ import annotations
@@ -169,6 +169,11 @@ class ToolBox:
             interview_state.add_statement(topic, answer)
 
             agent_visible, engine_only = split_analysis(analysis)
+            if self._inference_mode == "model":
+                # The transcript is the evidence available to the detective. In
+                # model mode it must notice inconsistencies itself, not receive
+                # the legacy keyword checker's interpretation of an answer.
+                agent_visible = {}
 
             # Engine-side record. Deliberately stored on the ToolBox, not on `base`,
             # so nothing here can ride back into the agent's context.
@@ -181,7 +186,7 @@ class ToolBox:
             })
 
             lines = [f'{character.get("name", suspect)} answers: "{answer}"']
-            if agent_visible["contradictions"]:
+            if agent_visible.get("contradictions"):
                 lines.append("")
                 lines.append(
                     f"NOTE: this conflicts with what {character.get('name', suspect)} "

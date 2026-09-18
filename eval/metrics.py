@@ -1,5 +1,5 @@
-"""Phase 0 metrics — pure functions over a list of run records (history records or raw
-results). This is where the roadmap's central KPI is computed: the AGENT-vs-BASELINE GAP.
+"""Metrics over run records (history records or raw results).
+Agent-versus-baseline differences are meaningful only for matched cases and settings.
 
 All functions operate on a list of dicts with the fields produced by eval/baseline.py:
     {case_id, mode, status, expected_status, score, status_match, actions_used,
@@ -110,7 +110,7 @@ def group_by_case(rows: list[dict]) -> dict[str, list[dict]]:
 
 
 # --------------------------------------------------------------------------- #
-# Phase 2 — information quality (info-gain) over the audit trace
+# Information quality (info-gain) over the audit trace
 # --------------------------------------------------------------------------- #
 def _real_actions(trace: list[dict]) -> list[dict]:
     """Real moves: without the 'closing' synthesis and without empty (tool=None) entries."""
@@ -119,7 +119,7 @@ def _real_actions(trace: list[dict]) -> list[dict]:
 
 
 def step_info_quality(trace: list[dict]) -> dict[str, Any]:
-    """Did the agent pick INFORMATIVE moves (the point of Phase 2)?
+    """Did the agent pick moves that changed the stored state?
 
     Productive move = successful and it produced a state change or moved a hypothesis
     (`state_changes` or `confidence_deltas`). Wasted = successful but informationally

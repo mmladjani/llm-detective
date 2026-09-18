@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Generate COMPLEX cases (Phase 1) in cases/generated/ — where the loop has something
-to beat the brute-force baseline (8 suspects, decoy objects, more red herrings,
-multi-day). Each is DETERMINISTICALLY self-checked (build_and_verify) before writing, so
-a broken case never reaches the agent.
+"""Generate authored legacy cases in cases/generated/ with configurable suspects,
+decoy objects, red herrings and time windows. build_and_verify checks the generated
+case against the fixed-rule solver before writing. These are not model-inference cases.
 
 Works OFFLINE (no key). The cases are NOT shown in the default corpus; include
 them explicitly: `python eval/baseline.py --include-generated`.

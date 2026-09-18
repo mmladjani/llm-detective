@@ -2,7 +2,7 @@
 
 A skill is a named investigative stance the agent can load through the `get_skill`
 tool. The .md files are the source of truth: edit a file and the agent's guidance
-changes without touching code (same pattern as the other three apps). This module
+changes without touching code. This module
 only indexes them: name -> one-line summary (the first non-heading line).
 """
 

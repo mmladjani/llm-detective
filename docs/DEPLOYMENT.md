@@ -1,20 +1,12 @@
 # Deploying to Vercel
 
-The app runs on Vercel as a single Python Function. Two things needed adapting to get
-there, and one thing you must do yourself before sharing the URL.
+The app exposes one FastAPI application in `app.py` with two static web views.
+Import the Git repository into Vercel, use the repository root, and configure
+the server-side variables below before testing. There is no separate npm build.
 
-## Why the app needed changing at all
+## Session persistence
 
-`app.py` used to keep live `GameSession` objects in a module-level dict. That is
-correct for exactly one deployment shape — a single long-lived process — and Vercel is
-not that: a Function is not a persistent process, so a second request may land on a
-different instance.
-
-The failure mode was the nasty kind. With Fluid compute an instance is often reused, so
-the dict would have worked *sometimes*: an investigation would survive four turns and
-vanish on the fifth, with no error to point at.
-
-Sessions are now serialized after every turn and rebuilt before the next one
+Sessions are serialized after every turn and rebuilt before the next one
 (`src/session_codec.py`), and where they are kept is a backend choice
 (`src/session_store.py`): a dict locally, Redis on Vercel. `tests/test_session_persistence.py`
 proves a run rehydrated after *every single turn* scores identically to one that ran
@@ -24,14 +16,13 @@ straight through.
 
 ### Python version
 
-`.python-version` pins **3.13** to match local development. Vercel's default is 3.12;
-3.13 and 3.14 are also available.
+`.python-version` pins **3.13** to match local development. Keep that file in the
+deployment and verify the selected runtime in the build log.
 
 ### Entrypoint
 
-Nothing to configure. Vercel looks for a `FastAPI` instance named `app` at
-`app.py`, `index.py`, `server.py`, `main.py`, `wsgi.py` or `asgi.py`, and this repo
-already has `app = FastAPI(...)` in `app.py`.
+This repo exports `app = FastAPI(...)` from `app.py`, a supported entrypoint in
+Vercel's [FastAPI deployment guide](https://vercel.com/docs/frameworks/backend/fastapi).
 
 ### `vercel.json`
 
@@ -60,7 +51,7 @@ vercel env add ANTHROPIC_API_KEY production
 | `SESSION_TTL_SECONDS` | no | How long a parked investigation lives. Default 7200. |
 | `APP_ACCESS_PASSWORD` | **yes if public** | Turns on the HTTP Basic gate. Unset = no gate. |
 | `APP_ACCESS_USER` | no | Username for the gate. Default `detective`. |
-| `MAX_LLM_SESSIONS_PER_HOUR` | **yes if public** | Spend cap. `0`/unset = unlimited. |
+| `MAX_LLM_SESSIONS_PER_HOUR` | **yes if public** | Native LLM session-start cap, not a billing cap. `0`/unset = unlimited. |
 | `LLM_LIMIT_WINDOW_SECONDS` | no | Window for the cap. Default 3600, floor 60. |
 | `AGENT_THINKING_BUDGET` | no | Default 2000. `0` disables extended thinking. |
 | `AGENT_MAX_TOKENS` | no | Default 4000. Must exceed the thinking budget. |
@@ -71,9 +62,8 @@ would do nothing even if you added one — and `.gitignore` already blocks it.
 
 ### Redis
 
-Vercel KV no longer exists; existing stores were migrated to Upstash Redis in December
-2024. For a new project, add a Redis integration from the Vercel Marketplace and
-connect it to the project — it injects the credentials automatically.
+Connect an Upstash Redis store and ensure the REST URL and token are available
+in the deployment's environment. A Redis socket URL alone does not satisfy this app.
 
 The store speaks Upstash's **REST** API over `httpx` (already a dependency), so there
 is no socket client to keep alive across invocations and no native dependency to
@@ -107,16 +97,23 @@ Three things to check:
 - **`"access_gate": false`** with a public URL — anyone can spend your key.
 - **`"llm_sessions_per_window": 0`** — no spend cap.
 
-Then confirm a session actually advances across requests:
+Then confirm a session advances across requests. This smoke test explicitly uses
+Legacy mode, so it makes no Anthropic calls. It requires `curl` and `jq`. Replace
+the example origin; `-u detective` prompts for your configured access password
+(omit it if the app gate is disabled, or change the username if configured):
 
 ```bash
-SID=$(curl -s -X POST https://<your-app>.vercel.app/api/sessions \
-  -H 'Content-Type: application/json' -d '{"case_id":"case-001"}' | jq -r .session_id)
-curl -s -X POST https://<your-app>.vercel.app/api/sessions/$SID/step | jq .state.iteration  # 1
-curl -s -X POST https://<your-app>.vercel.app/api/sessions/$SID/step | jq .state.iteration  # 2
+APP_URL=https://your-app.vercel.app
+SESSION_ID=$(curl --fail-with-body -sS -u detective -X POST "$APP_URL/api/sessions" \
+  -H 'Content-Type: application/json' \
+  -d '{"case_id":"case-001","mode":"rule_based"}' | jq -r .session_id)
+curl --fail-with-body -sS -u detective -X POST "$APP_URL/api/sessions/$SESSION_ID/step" | jq .state.iteration
+curl --fail-with-body -sS -u detective -X POST "$APP_URL/api/sessions/$SESSION_ID/step" | jq .state.iteration
 ```
 
-If the second call returns `1`, or 404s, the session is not persisting.
+Expect iterations `1`, then `2`. A missing/expired session or a store failure needs
+investigation before running paid tests. Finally, use **AI detective** in the browser
+to test an LLM case; that separate check incurs API usage.
 
 ## 4. Protect it before you share the URL
 
@@ -124,30 +121,14 @@ If the second call returns `1`, or 404s, the session is not persisting.
 settings or external protection, anyone reaching a public API-key-backed instance
 can spend its credits by starting LLM sessions.
 
-Project → Settings → Deployment Protection. Two choices there, and both matter:
+Vercel also provides [Deployment Protection](https://vercel.com/docs/deployment-protection).
+Check which methods and scopes your plan supports. Protect the production domain
+you actually share, not only preview URLs, and confirm access from a signed-out
+browser. Platform protection may also block the diagnostic endpoint.
 
-**Scope — pick "All Deployments".** The default, "Standard Protection", protects every
-URL *except* production domains. Since the production URL is the one you would share,
-Standard Protection leaves exactly the thing you are trying to protect wide open.
-"All Deployments" covers production too. Protection applies to every request, API
-routes included.
+### The built-in access gate
 
-**Method — depends on who needs in, and on your plan:**
-
-| Method | Plan | Who gets in |
-|---|---|---|
-| Vercel Authentication | free, every plan | only Vercel users with access to this project |
-| Password Protection | **Pro, $20/mo per project — not on Hobby** | anyone with the password |
-| Passport / Trusted IPs | Enterprise | IdP users / IP allowlist |
-
-So on Hobby, the free option only admits Vercel accounts that can already see the
-project. That is fine for your own use, but it does **not** let you hand the link to a
-developer who has no access to the project.
-
-### The built-in alternative (free, any plan)
-
-Because the free Vercel method cannot admit an outside collaborator, the app carries
-its own gate. Set `APP_ACCESS_PASSWORD` and every route except `/api/config` requires
+The app has its own access gate. Set `APP_ACCESS_PASSWORD` and every route except `/api/config` requires
 HTTP Basic credentials:
 
 ```bash
@@ -164,7 +145,7 @@ gates leak. Credentials are compared with `secrets.compare_digest`.
 Leave `APP_ACCESS_PASSWORD` unset locally and the gate does not exist, so local runs
 and the offline suite are unaffected.
 
-### The spend limit is a separate problem
+### The session-start limit is not a billing cap
 
 **Access control does not cap cost.** An authenticated visitor — or you, with a stuck
 browser tab — can still start investigations in a loop. Deployment Protection offers
@@ -175,6 +156,12 @@ A single investigation is already bounded: the case budget caps world actions an
 investigations get started, so that is what `MAX_LLM_SESSIONS_PER_HOUR` counts. Over
 the limit, `POST /api/sessions` with `mode: "llm"` returns 429 and points the caller at
 the `rule_based` baseline, which calls no model and is never charged.
+
+This counter only covers native LLM session creation. Resets of existing sessions,
+the retained `llm_schema` API driver and `/api/describe_case` are not covered by it.
+It does not count tokens, reviewer calls or audit calls. Restrict access to trusted
+testers and use provider-side usage controls; this is not a complete public-service
+spending safeguard.
 
 The counter is an atomic `INCR` in the session store, not a process variable: on
 serverless each instance would otherwise get its own full allowance. If the store is
@@ -190,10 +177,12 @@ assessment/fact/review calls before returning a world action or conclusion, so
 `maxDuration: 300`; verify the host's current limits before deploying. Prefer `/step`
 and measure its slowest turns; it is not guaranteed to be one model call per request.
 
-**A deploy invalidates in-flight sessions.** `session_codec.SCHEMA_VERSION` guards the
+**Incompatible changes invalidate in-flight sessions.** `session_codec.SCHEMA_VERSION` guards the
 format: if a deploy changes what a session looks like, an older blob is refused with a
 409 rather than half-loaded into a corrupted investigation. Bump the version when you
-change the payload shape.
+change the payload shape. Converting a case from authored to model inference also
+requires restarting its older sessions. Compatible sessions are not invalidated
+merely because a deployment happened.
 
 **A custom (generated) case body contains the hidden truth**, so it is stored in Redis
 and keyed server-side; the browser only ever receives `public_briefing()`. This is
@@ -211,9 +200,8 @@ its script on every request. Derive the next move from state instead — see
 **Concurrent turns on one session can lose an update.** `/step` reads the session,
 advances it and writes it back; two requests racing on the same session id would both
 read the same state and the later write would win. The UI disables its controls while
-a turn is in flight, so this needs a deliberate double-request to trigger, and it
-costs at most one turn. It is not guarded with a lock — one would have to be
-distributed to mean anything here, and the exposure does not justify it.
+a turn is in flight, but another tab or API client can still race. There is no
+distributed per-session lock; avoid concurrent requests to the same session.
 
 **Basic auth in the browser is untested end to end.** The 401 challenge, the
 `WWW-Authenticate` header and credentialed requests are all verified with curl, and
@@ -235,5 +223,5 @@ python app.py serve          # http://127.0.0.1:8000, memory store
 ```
 
 `vercel dev` also works if you want to exercise the platform locally. With no Redis
-variables set, the store is the in-process dict and behaviour matches the old app
-exactly, so tests stay hermetic and offline.
+variables set, the store is the in-process dict and sessions remain process-local. Offline tests use scripted clients;
+LLM investigations still make paid calls when a key is supplied.

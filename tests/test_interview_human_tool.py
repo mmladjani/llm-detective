@@ -144,6 +144,22 @@ def test_contradictions_do_reach_the_agent():
 
 # --- routing -------------------------------------------------------------------
 
+def test_model_interview_has_no_precomputed_contradiction_or_truthfulness():
+    case = make_case()
+    case._data["inference"] = "model"
+    box = ToolBox(case, responder=ScriptedResponder([
+        "I left at 11:30pm", "Actually, I left before 11:00pm"]))
+    args = {"suspect": "butler", "question": "When did you leave?", "topic": "timing"}
+    first = box.call("interview_human", args)
+    second = box.call("interview_human", args)
+    assert first["interview"]["answer"] == "I left at 11:30pm"
+    assert second["observation"] == 'Edmund answers: "Actually, I left before 11:00pm"'
+    assert "contradictions" not in second["interview"]
+    assert "contradiction_count" not in second["interview"]
+    assert not (set(ENGINE_ONLY_FIELDS) & second["interview"].keys())
+    assert len(box.human_interview_audit) == 2
+
+
 def test_non_human_character_is_rejected():
     box = ToolBox(make_case(), responder=ScriptedResponder(["unused"]))
 

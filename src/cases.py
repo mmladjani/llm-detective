@@ -51,11 +51,11 @@ class Case:
     def inference_mode(self) -> str:
         """Who decides what a piece of evidence MEANS: "authored" or "model".
 
-        "authored" (the default, and every original case): the case file labels each
+        "authored" (the default for legacy cases and generated cases): the file labels each
         evidence item with `supports` (which suspect it points at) and `weight` (how
         strongly). The engine sums those numbers, so the attribution and the strength
-        of the inference are the case author's, not the model's. The model still
-        chooses which questions to ask — but not what the answers mean.
+        of the inference are the case author's, not the model's. If an LLM driver
+        is used, it chooses actions but does not own these stored attributions.
 
         "model": the case file carries no `supports`/`weight` at all. Tool results
         deliver the observation and the bare evidence item; the model must call
@@ -63,8 +63,8 @@ class Case:
         applies the model's own numbers. Report facts also require cited model
         assertions via establish_fact; authored reveals are suppressed.
 
-        This is the axis that separates "agent searching a state machine" from "agent
-        reasoning": see docs/LIMITATIONS.md.
+        Cases 008–013 use model inference; 008–010 also allow human witnesses.
+        Interpretation remains fallible: see docs/LIMITATIONS.md.
         """
         mode = str(self._data.get("inference", "authored")).lower()
         return mode if mode in ("authored", "model") else "authored"
@@ -151,7 +151,7 @@ class Case:
         return list(self.index.get("characters", []))
 
 
-# Generated (Phase 1) complex cases live SEPARATELY, so they do not change the default
+# Generated complex cases live separately, so they do not change the default
 # built-in corpus or the tests that assume it. They are included explicitly.
 GENERATED_DIR = CASES_DIR / "generated"
 
