@@ -50,16 +50,23 @@
   #verdict .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
     padding:22px 26px;max-width:520px;text-align:center}
   .muted{color:var(--muted)}
+  .activity{display:flex;gap:10px;align-items:flex-start;margin:12px 16px;font-size:13px}
+  .activity.working{position:fixed;right:16px;bottom:16px;z-index:20;width:min(360px,calc(100vw - 32px));margin:0;padding:12px 14px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;box-shadow:0 4px 20px #0006}
+  #workElapsed{margin-top:4px;font-size:12px;color:var(--muted)}
+  .spinner{flex:0 0 auto;width:18px;height:18px;margin-top:2px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  .spinner[hidden]{display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
 </style>
 </head>
 <body>
 <header>
   <h1>LLM Detective - Board view</h1>
-  <select id="case" aria-label="Case"></select>
   <select id="mode" aria-label="Investigator">
-    <option value="llm" selected>LLM agent</option>
-    <option value="rule_based">Rule-based comparison</option>
+    <option value="llm" selected>AI detective</option>
+    <option value="rule_based">Legacy — deterministic demo</option>
   </select>
+  <select id="case" aria-label="Case"></select>
   <button id="start" class="primary">Start</button>
   <button id="step" disabled>Step ▶</button>
   <button id="run" disabled>Auto ⏩</button>
@@ -69,6 +76,15 @@
   <span style="flex:1"></span>
   <a href="/">← Main view · human interviews</a>
 </header>
+<p id="modeNote" class="muted" style="margin:12px 16px" role="status"></p>
+<div id="workActivity" class="activity">
+  <span id="workSpinner" class="spinner" aria-hidden="true" hidden></span>
+  <div>
+    <div id="workStatus" role="status">Choose a case and select Start.</div>
+    <div id="workElapsed" aria-hidden="true" hidden></div>
+  </div>
+</div>
+<div id="requestError" role="alert" style="margin:0 16px;color:var(--bad)"></div>
 
 <div class="wrap">
   <div class="stage" id="stage">
@@ -84,19 +100,45 @@
 
 <script>
 const $ = s=>document.querySelector(s);
-let sid=null, view=null, running=false, busy=false, runGeneration=0, positions={}, cleared=new Set();
+let sid=null, view=null, running=false, busy=false, runGeneration=0, positions={}, cleared=new Set(), cases=[];
+let activityTimer=null, activityStartedAt=0, requestKind='';
 const FACES=['🧑‍🦰','🧔','👩','🧑‍🦱','👨‍🦳'];
 
+function syncActivity(active){
+  $('#workActivity').classList.toggle('working',active);
+  $('#workSpinner').hidden=!active;
+  $('#workElapsed').hidden=!active;
+  if(active && activityTimer===null){
+    activityStartedAt=Date.now();
+    const tick=()=>{ $('#workElapsed').textContent=Math.floor((Date.now()-activityStartedAt)/1000)+'s elapsed · no need to refresh'; };
+    tick();
+    activityTimer=setInterval(tick,1000);
+  }else if(!active && activityTimer!==null){
+    clearInterval(activityTimer);
+    activityTimer=null;
+  }
+}
 async function api(p,o){const r=await fetch(p,Object.assign({headers:{'Content-Type':'application/json'}},o||{}));
   const b=await r.json().catch(()=>({})); if(!r.ok) throw new Error(b.detail||('HTTP '+r.status)); return b;}
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
 async function loadCases(){
-  const {cases}=await api('/api/cases');
-  cases.sort((a,b)=>(b.inference==='model')-(a.inference==='model'));
-  // Human interviews need the main view's answer panel; do not offer a dead end here.
-  $('#case').innerHTML=cases.filter(c=>!c.human_played).map(c=>`<option value="${c.case_id}">${esc(c.title)}</option>`).join('');
+  cases=(await api('/api/cases')).cases;
+  renderCaseOptions();
 }
+function renderCaseOptions(){
+  const legacy=$('#mode').value==='rule_based';
+  const previous=$('#case').value;
+  // Human interviews need the main view's answer panel; do not offer a dead end here.
+  const visible=cases.filter(c=>!c.human_played && (legacy ? c.inference!=='model' : c.inference==='model'));
+  $('#case').replaceChildren(...visible.map(c=>new Option(c.title.replace(/ \((?:unlabelled|model inference)\)$/i,''),c.case_id)));
+  if(visible.some(c=>c.case_id===previous)) $('#case').value=previous;
+  $('#modeNote').textContent=legacy
+    ? 'Legacy examples: fixed rules and preassigned evidence weights, originally used to explore differences from the LLM loop.'
+    : 'The AI chooses actions and interprets evidence. For cases where you play a witness, use the main view.';
+  syncControls();
+}
+$('#mode').onchange=renderCaseOptions;
 
 function layoutScene(){
   const st=view.state, stage=$('#stage');
@@ -231,33 +273,52 @@ async function finish(){
 
 $('#start').onclick=async()=>{
   if(busy || running) return;
-  busy=true; syncControls(); cleared.clear();
+  $('#requestError').textContent='';
+  busy=true; requestKind='start'; syncControls(); cleared.clear();
   $('#verdict').style.display='none';
   try{
     view=await api('/api/sessions',{method:'POST',body:JSON.stringify({case_id:$('#case').value,mode:$('#mode').value})});
     sid=view.session_id;
     layoutScene(); render();
-  }catch(e){ alert(e.message); }
+  }catch(e){ $('#requestError').textContent=e.message; }
   finally{ busy=false; syncControls(); }
 };
 function syncControls(){
   const canStep=!!sid && view?.state.status==='investigating';
-  $('#start').disabled=busy || running;
+  $('#start').disabled=busy || running || !$('#case').value;
+  $('#mode').disabled=$('#case').disabled=busy || running;
   $('#step').disabled=!canStep || busy || running;
   $('#reset').disabled=!sid || busy || running;
   $('#run').disabled=!running && (!canStep || busy);
   $('#run').textContent=running?'Pause ⏸':'Auto ⏩';
+  syncActivity(busy || (running && canStep && !view?.awaiting_human));
+  const llm=(view?.run_metadata?.requested_mode || $('#mode').value)==='llm';
+  const message=busy ? (
+    requestKind==='start' ? 'Starting investigation…' :
+    requestKind==='reset' ? 'Restarting investigation…' :
+    llm ? 'Waiting for the AI… A turn may include investigation and judge review. This can take a while.' : 'Running the legacy investigation…') :
+    $('#requestError').textContent ? 'Request failed. Review the error before continuing.' :
+    view?.awaiting_human ? 'Waiting for a witness answer. Human interviews use the main view.' :
+    sid && !canStep ? 'Investigation finished. Review the outcome and reveal the score.' :
+    running ? 'Running automatically. Pause finishes the current turn, then waits.' :
+    sid ? 'Investigation paused. Select Step or Auto to continue.' : 'Choose a case and select Start.';
+  if($('#workStatus').textContent!==message) $('#workStatus').textContent=message;
 }
 async function step(){
   if(busy) return;
-  busy=true; syncControls();
+  $('#requestError').textContent='';
+  busy=true; requestKind='step'; syncControls();
   try{ view=await api(`/api/sessions/${sid}/step`,{method:'POST'}); render(view.latest); }
-  catch(e){ running=false; alert(e.message); }
+  catch(e){ running=false; $('#requestError').textContent=e.message; }
   finally{ busy=false; syncControls(); }
 }
 $('#step').onclick=step;
 $('#run').onclick=async()=>{
-  if(running){ running=false; runGeneration++; syncControls(); return; }
+  if(running){
+    running=false; runGeneration++; syncControls();
+    if(busy) $('#workStatus').textContent='Pausing after the current turn… Please wait for its result.';
+    return;
+  }
   if(busy) return;
   running=true; syncControls();
   const generation=++runGeneration;
@@ -270,11 +331,12 @@ $('#run').onclick=async()=>{
 };
 $('#reset').onclick=async()=>{
   if(busy || running) return;
-  busy=true; syncControls();
+  $('#requestError').textContent='';
+  busy=true; requestKind='reset'; syncControls();
   try{
     view=await api(`/api/sessions/${sid}/reset`,{method:'POST'});
     $('#verdict').style.display='none'; cleared.clear(); layoutScene(); render();
-  }catch(e){ alert(e.message); }
+  }catch(e){ $('#requestError').textContent=e.message; }
   finally{ busy=false; syncControls(); }
 };
 loadCases();
